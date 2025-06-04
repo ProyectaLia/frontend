@@ -1,0 +1,383 @@
+"use client"
+
+import type React from "react"
+
+import { useState } from "react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { X, Plus, Upload, ArrowLeft } from "lucide-react"
+import { toast } from "@/components/ui/use-toast"
+
+// Datos de ejemplo para el perfil
+const profileData = {
+  id: "1",
+  name: "Ana Rodríguez",
+  career: "Ingeniería en Sistemas Computacionales",
+  university: "Universidad Nacional Autónoma",
+  bio: "Estudiante de último año apasionada por el desarrollo web y la inteligencia artificial. Busco colaborar en proyectos innovadores que tengan impacto social.",
+  skills: ["React", "Node.js", "Python", "Machine Learning", "UI/UX Design", "MongoDB", "Express", "TypeScript", "Git"],
+  interests: ["Inteligencia Artificial", "Desarrollo Web", "Aplicaciones Móviles", "Sostenibilidad", "Educación"],
+  portfolio: "https://ana-rodriguez.dev",
+  github: "https://github.com/ana-rodriguez",
+  linkedin: "https://linkedin.com/in/ana-rodriguez",
+  twitter: "https://twitter.com/ana_rodriguez",
+}
+
+export default function EditProfilePage() {
+  const [formData, setFormData] = useState({ ...profileData })
+  const [newSkill, setNewSkill] = useState("")
+  const [newInterest, setNewInterest] = useState("")
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const addSkill = () => {
+    if (newSkill && !formData.skills.includes(newSkill)) {
+      setFormData((prev) => ({ ...prev, skills: [...prev.skills, newSkill] }))
+      setNewSkill("")
+    }
+  }
+
+  const removeSkill = (skill: string) => {
+    setFormData((prev) => ({ ...prev, skills: prev.skills.filter((s) => s !== skill) }))
+  }
+
+  const addInterest = () => {
+    if (newInterest && !formData.interests.includes(newInterest)) {
+      setFormData((prev) => ({ ...prev, interests: [...prev.interests, newInterest] }))
+      setNewInterest("")
+    }
+  }
+
+  const removeInterest = (interest: string) => {
+    setFormData((prev) => ({ ...prev, interests: prev.interests.filter((i) => i !== interest) }))
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    // Aquí iría la lógica para guardar los cambios
+    console.log("Guardando cambios:", formData)
+    toast({
+      title: "Perfil actualizado",
+      description: "Los cambios han sido guardados correctamente.",
+    })
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+      {/* Header con navegación básica */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-purple-100 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <Link href="/" className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">PH</span>
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                ProyectaLia Hub
+              </span>
+            </Link>
+
+            <nav className="hidden md:flex items-center space-x-8">
+              <Link href="/" className="text-gray-600 hover:text-purple-600 transition-colors">
+                Explorar Proyectos
+              </Link>
+              <Link href="/create-project" className="text-gray-600 hover:text-purple-600 transition-colors">
+                Crear Proyecto
+              </Link>
+              <Link href="/my-projects" className="text-gray-600 hover:text-purple-600 transition-colors">
+                Mis Proyectos
+              </Link>
+            </nav>
+
+            <div className="flex items-center space-x-4">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src="/placeholder-user.jpg" alt="Usuario" />
+                <AvatarFallback className="bg-purple-100 text-purple-600">AR</AvatarFallback>
+              </Avatar>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center mb-6">
+          <Link href="/profile/1" className="text-purple-600 hover:text-purple-800 mr-3">
+            <ArrowLeft size={20} />
+          </Link>
+          <h1 className="text-3xl font-bold text-gray-900">Editar Perfil</h1>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <Card className="mb-8 border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle>Información Personal</CardTitle>
+              <CardDescription>Actualiza tu información básica y biografía</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Foto de perfil */}
+              <div className="flex flex-col items-center sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
+                <div className="relative">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src="/placeholder-user.jpg" alt={formData.name} />
+                    <AvatarFallback className="text-2xl bg-purple-100 text-purple-600">
+                      {formData.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <Button size="sm" variant="secondary" className="absolute bottom-0 right-0 rounded-full h-8 w-8 p-0">
+                    <Upload size={14} />
+                  </Button>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">Foto de Perfil</h3>
+                  <p className="text-sm text-gray-500 mb-3">
+                    Sube una foto clara donde se vea bien tu rostro. Formatos: JPG, PNG. Máximo 2MB.
+                  </p>
+                  <div className="flex space-x-3">
+                    <Button type="button" size="sm" variant="outline">
+                      Cambiar Foto
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" className="text-red-500 hover:text-red-600">
+                      Eliminar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nombre Completo</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="h-11"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="career">Carrera / Programa de Estudios</Label>
+                  <Input
+                    id="career"
+                    name="career"
+                    value={formData.career}
+                    onChange={handleChange}
+                    className="h-11"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="university">Universidad / Institución</Label>
+                  <Input
+                    id="university"
+                    name="university"
+                    value={formData.university}
+                    onChange={handleChange}
+                    className="h-11"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bio">Biografía</Label>
+                <Textarea
+                  id="bio"
+                  name="bio"
+                  value={formData.bio}
+                  onChange={handleChange}
+                  rows={4}
+                  placeholder="Cuéntanos un poco sobre ti, tus intereses académicos y profesionales..."
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="mb-8 border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle>Habilidades y Áreas de Interés</CardTitle>
+              <CardDescription>
+                Agrega las habilidades que posees y las áreas en las que te gustaría trabajar
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <Label>Habilidades</Label>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {formData.skills.map((skill) => (
+                    <Badge
+                      key={skill}
+                      variant="secondary"
+                      className="bg-purple-100 text-purple-700 pl-3 pr-2 py-1.5 flex items-center gap-1"
+                    >
+                      {skill}
+                      <button
+                        type="button"
+                        onClick={() => removeSkill(skill)}
+                        className="ml-1 text-purple-500 hover:text-purple-700 rounded-full"
+                      >
+                        <X size={14} />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex">
+                  <Input
+                    placeholder="Añadir habilidad (ej. React, Python, Diseño UX)"
+                    value={newSkill}
+                    onChange={(e) => setNewSkill(e.target.value)}
+                    className="h-11 rounded-r-none"
+                  />
+                  <Button type="button" onClick={addSkill} className="rounded-l-none bg-purple-600 hover:bg-purple-700">
+                    <Plus size={18} />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Label>Áreas de Interés para Proyectos</Label>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {formData.interests.map((interest) => (
+                    <Badge
+                      key={interest}
+                      variant="secondary"
+                      className="bg-indigo-100 text-indigo-700 pl-3 pr-2 py-1.5 flex items-center gap-1"
+                    >
+                      {interest}
+                      <button
+                        type="button"
+                        onClick={() => removeInterest(interest)}
+                        className="ml-1 text-indigo-500 hover:text-indigo-700 rounded-full"
+                      >
+                        <X size={14} />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex">
+                  <Input
+                    placeholder="Añadir área de interés (ej. Inteligencia Artificial, Educación)"
+                    value={newInterest}
+                    onChange={(e) => setNewInterest(e.target.value)}
+                    className="h-11 rounded-r-none"
+                  />
+                  <Button
+                    type="button"
+                    onClick={addInterest}
+                    className="rounded-l-none bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    <Plus size={18} />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="mb-8 border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle>Enlaces y Redes Sociales</CardTitle>
+              <CardDescription>Comparte tus perfiles profesionales y portafolio</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="portfolio">Enlace a Portafolio Personal</Label>
+                  <Input
+                    id="portfolio"
+                    name="portfolio"
+                    value={formData.portfolio}
+                    onChange={handleChange}
+                    placeholder="https://tuportafolio.com"
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="github">GitHub</Label>
+                  <Input
+                    id="github"
+                    name="github"
+                    value={formData.github}
+                    onChange={handleChange}
+                    placeholder="https://github.com/username"
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="linkedin">LinkedIn</Label>
+                  <Input
+                    id="linkedin"
+                    name="linkedin"
+                    value={formData.linkedin}
+                    onChange={handleChange}
+                    placeholder="https://linkedin.com/in/username"
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="twitter">Twitter</Label>
+                  <Input
+                    id="twitter"
+                    name="twitter"
+                    value={formData.twitter}
+                    onChange={handleChange}
+                    placeholder="https://twitter.com/username"
+                    className="h-11"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end space-x-4">
+            <Button type="button" variant="outline" asChild>
+              <Link href="/profile/1">Cancelar</Link>
+            </Button>
+            <Button
+              type="submit"
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+            >
+              Guardar Cambios
+            </Button>
+          </div>
+        </form>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-purple-100 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center space-x-2 mb-4 md:mb-0">
+              <div className="w-6 h-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-md flex items-center justify-center">
+                <span className="text-white font-bold text-xs">PH</span>
+              </div>
+              <span className="font-semibold text-gray-900">ProyectaLia Hub</span>
+            </div>
+            <div className="flex space-x-6 text-sm text-gray-600">
+              <Link href="/about" className="hover:text-purple-600 transition-colors">
+                Acerca de
+              </Link>
+              <Link href="/contact" className="hover:text-purple-600 transition-colors">
+                Contacto
+              </Link>
+              <Link href="/terms" className="hover:text-purple-600 transition-colors">
+                Términos y Condiciones
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}
