@@ -20,6 +20,7 @@ import { useAuth } from "@/src/context/AuthContext"
 import { useRouter } from "next/navigation"
 import Navbar from "@/components/Navbar"
 import { getAllProjects } from "@/src/services/projectService"
+import { useDebounce } from "@/hooks/useDebounce"
 
 const skillsFilter = ["React", "Python", "Node.js", "UX/UI Design", "Machine Learning", "Flutter", "Marketing Digital"]
 const areasFilter = [
@@ -52,6 +53,7 @@ function getStatusLabel(status: string) {
 
 export default function ExplorePage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const debouncedSearchTerm = useDebounce(searchTerm, 400)
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [selectedArea, setSelectedArea] = useState("")
   const { isAuthenticated, user, logout } = useAuth()
@@ -68,7 +70,7 @@ export default function ExplorePage() {
       setError("")
       try {
         const params: any = {}
-        if (searchTerm) params.search = searchTerm
+        if (debouncedSearchTerm) params.search = debouncedSearchTerm
         if (selectedArea && selectedArea !== "all") params.areaTheme = selectedArea
         if (selectedSkills.length > 0) params.skills = selectedSkills.join(",")
         const res = await getAllProjects(params)
@@ -80,7 +82,7 @@ export default function ExplorePage() {
       }
     }
     fetchProjects()
-  }, [searchTerm, selectedArea, selectedSkills])
+  }, [debouncedSearchTerm, selectedArea, selectedSkills])
 
   const filteredProjects = projects.filter((project) => {
     const matchesSearch =
@@ -92,19 +94,6 @@ export default function ExplorePage() {
     return matchesSearch && matchesSkills && matchesArea
   })
 
-  if (loading) return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
-      <Navbar />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center py-12">
-          <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Search className="h-12 w-12 text-purple-400 animate-pulse" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Cargando proyectos...</h3>
-        </div>
-      </main>
-    </div>
-  )
   if (error) return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
       <Navbar />
@@ -196,74 +185,89 @@ export default function ExplorePage() {
         )}
 
         {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.map((project) => (
-            <Card
-              key={project.id}
-              className="group hover:shadow-xl transition-all duration-300 border-0 shadow-lg hover:-translate-y-1 bg-white/80 backdrop-blur-sm"
-            >
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between mb-2">
-                  <Badge
-                    variant={project.status === "BUSCANDO_COLABORADORES" ? "default" : "secondary"}
-                    className={
-                      project.status === "BUSCANDO_COLABORADORES"
-                        ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                        : "bg-orange-100 text-orange-700"
-                    }
-                  >
-                    {getStatusLabel(project.status)}
-                  </Badge>
-                  <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Heart className="h-4 w-4" />
-                  </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[300px]">
+          {loading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="animate-pulse bg-white/60 rounded-xl shadow h-64 p-6 flex flex-col justify-between">
+                <div className="h-6 bg-purple-100 rounded w-1/2 mb-4" />
+                <div className="h-4 bg-gray-100 rounded w-1/3 mb-2" />
+                <div className="h-4 bg-gray-100 rounded w-2/3 mb-2" />
+                <div className="flex gap-2 mt-4">
+                  <div className="h-6 w-16 bg-purple-100 rounded" />
+                  <div className="h-6 w-16 bg-purple-100 rounded" />
                 </div>
-                <CardTitle className="text-xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">
-                  {project.title}
-                </CardTitle>
-                <CardDescription className="text-gray-600">
-                  por <span className="font-medium text-purple-600">{project.creator?.name || "Desconocido"}</span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-gray-700 line-clamp-3">{project.description}</p>
-
-                <div>
-                  <p className="text-sm font-medium text-gray-900 mb-2">Habilidades Requeridas:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {((project.requiredSkills ?? project.skills ?? '').split(',').filter(Boolean)).slice(0, 3).map((skill: string) => (
-                      <Badge key={skill} variant="outline" className="text-xs border-purple-200 text-purple-700">
-                        {skill}
-                      </Badge>
-                    ))}
-                    {((project.requiredSkills ?? project.skills ?? '').split(',').filter(Boolean)).length > 3 && (
-                      <Badge variant="outline" className="text-xs border-gray-200 text-gray-600">
-                        +{((project.requiredSkills ?? project.skills ?? '').split(',').filter(Boolean)).length - 3} más
-                      </Badge>
-                    )}
+                <div className="h-10 bg-purple-100 rounded mt-6" />
+              </div>
+            ))
+          ) : (
+            filteredProjects.map((project) => (
+              <Card
+                key={project.id}
+                className="group hover:shadow-xl transition-all duration-300 border-0 shadow-lg hover:-translate-y-1 bg-white/80 backdrop-blur-sm"
+              >
+                <CardHeader className="pb-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <Badge
+                      variant={project.status === "BUSCANDO_COLABORADORES" ? "default" : "secondary"}
+                      className={
+                        project.status === "BUSCANDO_COLABORADORES"
+                          ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                          : "bg-orange-100 text-orange-700"
+                      }
+                    >
+                      {getStatusLabel(project.status)}
+                    </Badge>
+                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Heart className="h-4 w-4" />
+                    </Button>
                   </div>
-                </div>
+                  <CardTitle className="text-xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">
+                    {project.title}
+                  </CardTitle>
+                  <CardDescription className="text-gray-600">
+                    por <span className="font-medium text-purple-600">{project.creator?.name || "Desconocido"}</span>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-gray-700 line-clamp-3">{project.description}</p>
 
-                <div className="flex items-center justify-between pt-2">
-                  <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">
-                    {project.area}
-                  </Badge>
-                  <span className="text-sm text-gray-500">{project.collaboratorsNeeded} colaboradores</span>
-                </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 mb-2">Habilidades Requeridas:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {((project.requiredSkills ?? project.skills ?? '').split(',').filter(Boolean)).slice(0, 3).map((skill: string) => (
+                        <Badge key={skill} variant="outline" className="text-xs border-purple-200 text-purple-700">
+                          {skill}
+                        </Badge>
+                      ))}
+                      {((project.requiredSkills ?? project.skills ?? '').split(',').filter(Boolean)).length > 3 && (
+                        <Badge variant="outline" className="text-xs border-gray-200 text-gray-600">
+                          +{((project.requiredSkills ?? project.skills ?? '').split(',').filter(Boolean)).length - 3} más
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
 
-                <Button
-                  asChild
-                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-                >
-                  <Link href={`/projects/${project.id}`}>Ver Detalles</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex items-center justify-between pt-2">
+                    <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">
+                      {project.area}
+                    </Badge>
+                    <span className="text-sm text-gray-500">{project.collaboratorsNeeded} colaboradores</span>
+                  </div>
+
+                  <Button
+                    asChild
+                    className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                  >
+                    <Link href={`/projects/${project.id}`}>Ver Detalles</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
 
         {/* Empty State */}
-        {filteredProjects.length === 0 && (
+        {!loading && filteredProjects.length === 0 && (
           <div className="text-center py-12">
             <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="h-12 w-12 text-purple-400" />

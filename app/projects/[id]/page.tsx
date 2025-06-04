@@ -98,7 +98,7 @@ export default function ProjectDetailPage({ params }: { params: Record<string, s
         setError(err.response?.data?.message || "Error al cargar el proyecto.")
       } finally {
         setLoading(false)
-      }
+  }
     }
     if (id) fetchProject()
   }, [id])
@@ -112,9 +112,9 @@ export default function ProjectDetailPage({ params }: { params: Record<string, s
             <MessageSquare className="h-12 w-12 text-purple-400 animate-pulse" />
           </div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">Cargando proyecto...</h3>
-        </div>
+              </div>
       </main>
-    </div>
+            </div>
   )
   if (error || !project) return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
@@ -292,13 +292,13 @@ export default function ProjectDetailPage({ params }: { params: Record<string, s
                   .map((objective: string) => objective.trim())
                   .filter(Boolean)
                   .map((objective: string, index: number) => (
-                    <li key={index} className="flex items-start">
-                      <span className="flex-shrink-0 h-6 w-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mr-3 mt-0.5 font-medium text-sm">
-                        {index + 1}
-                      </span>
-                      <span className="text-gray-700">{objective}</span>
-                    </li>
-                  ))}
+                  <li key={index} className="flex items-start">
+                    <span className="flex-shrink-0 h-6 w-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mr-3 mt-0.5 font-medium text-sm">
+                      {index + 1}
+                    </span>
+                    <span className="text-gray-700">{objective}</span>
+                  </li>
+                ))}
               </ul>
             </div>
 
