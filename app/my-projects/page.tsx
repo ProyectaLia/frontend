@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,35 +10,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Edit, Users, Plus, Search } from "lucide-react"
 import Navbar from "@/components/Navbar"
 import ProtectedRoute from "@/components/ProtectedRoute"
-import { getMyProjects, getMyCollaboratingProjects } from "@/src/services/projectService"
+import { useProjects } from "@/hooks/useProjects"
 import { useAuth } from "@/src/context/AuthContext"
 import { stringToArray, getStatusLabel, AREAS, SKILLS } from "@/lib/profileUtils"
 import EmptyState from "@/components/ui/EmptyState"
 
 export default function MyProjectsPage() {
   const [activeTab, setActiveTab] = useState("created")
-  const [myProjects, setMyProjects] = useState<any[]>([])
-  const [collaboratingProjects, setCollaboratingProjects] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
+  const { myProjects, collaborations: collaboratingProjects, loading, error } = useProjects(true)
   const { loading: authLoading, isAuthenticated } = useAuth()
-
-  useEffect(() => {
-    if (authLoading) return // Espera a que AuthContext termine de cargar
-    if (!isAuthenticated) return // No intentes cargar si no está autenticado
-    setLoading(true)
-    setError("")
-    Promise.all([
-      getMyProjects().then(res => res.data.data || res.data).catch(() => []),
-      getMyCollaboratingProjects().then(res => res.data.data || res.data).catch(() => [])
-    ])
-      .then(([my, collab]) => {
-        setMyProjects(my)
-        setCollaboratingProjects(collab)
-      })
-      .catch(() => setError("Error al cargar tus proyectos"))
-      .finally(() => setLoading(false))
-  }, [authLoading, isAuthenticated])
 
   return (
     <ProtectedRoute>

@@ -16,12 +16,11 @@ import { createCollaborationRequest, getMySentCollaborationRequests } from "@/sr
 import { stringToArray, getStatusLabel, AREAS, SKILLS } from "@/lib/profileUtils"
 import ErrorMessage from "@/components/ui/ErrorMessage"
 import LoadingMessage from "@/components/ui/LoadingMessage"
+import { useProjectDetail } from "@/hooks/useProjectDetail"
 
 export default function ProjectDetailPage({ params }: { params: Record<string, string> }) {
   const { id } = use(params)
-  const [project, setProject] = useState<any | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
+  const { project, loading, error } = useProjectDetail(id)
   const [applicationMessage, setApplicationMessage] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const router = useRouter()
@@ -61,22 +60,6 @@ export default function ProjectDetailPage({ params }: { params: Record<string, s
       alreadyAppliedMsg = "No puedes volver a postular a este proyecto porque tu solicitud fue rechazada.";
     }
   }
-
-  useEffect(() => {
-    const fetchProject = async () => {
-      setLoading(true)
-      setError("")
-      try {
-        const res = await getProjectById(id)
-        setProject(res.data.data || res.data)
-      } catch (err: any) {
-        setError(err.response?.data?.message || "Error al cargar el proyecto.")
-      } finally {
-        setLoading(false)
-  }
-    }
-    if (id) fetchProject()
-  }, [id])
 
   if (loading) return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">

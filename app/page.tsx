@@ -64,7 +64,7 @@ export default function ExplorePage() {
       project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.description.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesSkills = selectedSkills.length === 0 || selectedSkills.some((skill) => project.skills.includes(skill))
-    const matchesArea = !selectedArea || project.area === selectedArea
+    const matchesArea = !selectedArea || selectedArea === "all" || project.areaTheme === selectedArea
 
     return matchesSearch && matchesSkills && matchesArea
   })
@@ -146,9 +146,11 @@ export default function ExplorePage() {
                 <h3 className="text-xl font-semibold mb-2">¿Tienes una idea increíble?</h3>
                 <p className="text-purple-100">Comparte tu proyecto y encuentra colaboradores talentosos.</p>
               </div>
-              <Button className="mt-4 sm:mt-0 bg-white text-purple-600 hover:bg-gray-100">
-                <Plus className="mr-2 h-4 w-4" />
-                Crear Proyecto
+              <Button asChild className="mt-4 sm:mt-0 bg-white text-purple-600 hover:bg-gray-100">
+                <Link href="/create-project">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Crear Proyecto
+                </Link>
               </Button>
             </div>
           </div>

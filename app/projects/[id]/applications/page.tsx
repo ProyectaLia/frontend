@@ -15,6 +15,7 @@ import { toast } from "@/components/ui/use-toast"
 import { stringToArray, AREAS, SKILLS } from "@/lib/profileUtils"
 import ErrorMessage from "@/components/ui/ErrorMessage"
 import LoadingMessage from "@/components/ui/LoadingMessage"
+import { useCollaborationRequests } from "@/hooks/useCollaborationRequests"
 
 // Devuelve las clases de color según el estado de la solicitud
 function getStatusColor(status: string) {
@@ -49,29 +50,14 @@ function getStatusColor(status: string) {
 export default function ProjectApplicationsPage() {
   const params = useParams()
   const projectId = params?.id as string
-  const [requests, setRequests] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-
+  const fetcher = useCallback(() => getProjectCollaborationRequests(projectId), [projectId])
+  const { requests, loading, error } = useCollaborationRequests(fetcher, !!projectId)
   // Estado local para el status de cada solicitud (para feedback inmediato)
   const [applicationStatus, setApplicationStatus] = useState<Record<string, string>>({})
 
-  const fetchRequests = useCallback(() => {
-    setLoading(true)
-    getProjectCollaborationRequests(projectId)
-      .then(res => {
-        const data = res.data.data || res.data
-        setRequests(data)
-        // Inicializa el estado local de status
-        setApplicationStatus(Object.fromEntries((data || []).map((app: any) => [app.id, app.status])))
-      })
-      .catch(() => setError("Error al cargar las solicitudes."))
-      .finally(() => setLoading(false))
-  }, [projectId])
-
   useEffect(() => {
-    if (projectId) fetchRequests()
-  }, [projectId, fetchRequests])
+    setApplicationStatus(Object.fromEntries((requests || []).map((app: any) => [app.id, app.status])));
+  }, [requests]);
 
   const handleAccept = async (applicationId: string) => {
     try {

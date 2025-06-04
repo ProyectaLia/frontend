@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import ProtectedRoute from "@/components/ProtectedRoute"
 import { getMySentCollaborationRequests } from "@/src/services/requestService"
 import ErrorMessage from "@/components/ui/ErrorMessage"
 import LoadingMessage from "@/components/ui/LoadingMessage"
+import { useCollaborationRequests } from "@/hooks/useCollaborationRequests"
 
 // Devuelve las clases de color según el estado de la solicitud
 function getStatusColor(status: string) {
@@ -44,18 +45,8 @@ function getStatusColor(status: string) {
 }
 
 export default function MyApplicationsPage() {
-  const [requests, setRequests] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
+  const { requests, loading, error } = useCollaborationRequests(getMySentCollaborationRequests)
   const [filter, setFilter] = useState("all")
-
-  useEffect(() => {
-    setLoading(true)
-    getMySentCollaborationRequests()
-      .then(res => setRequests(res.data.data || res.data))
-      .catch(() => setError("Error al cargar tus solicitudes enviadas."))
-      .finally(() => setLoading(false))
-  }, [])
 
   // Filtrado de solicitudes según el filtro seleccionado
   const filteredRequests =

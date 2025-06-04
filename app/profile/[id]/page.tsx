@@ -10,8 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Navbar from "@/components/Navbar"
 import { useAuth } from "@/src/context/AuthContext"
 import { use } from "react"
-import { useEffect, useState } from "react"
-import { getMyProjects, getMyCollaboratingProjects } from "@/src/services/projectService"
+import { useProfileData } from "@/hooks/useProfileData"
 import { stringToArray, getStatusLabel, AREAS, SKILLS } from "@/lib/profileUtils"
 import ErrorMessage from "@/components/ui/ErrorMessage"
 import LoadingMessage from "@/components/ui/LoadingMessage"
@@ -20,23 +19,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   const { user, loading } = useAuth();
   const { id } = use(params);
   const isOwnProfile = user && String(user.id) === String(id);
-
-  // Estado para proyectos y colaboraciones reales
-  const [myProjects, setMyProjects] = useState<any[]>([]);
-  const [collaborations, setCollaborations] = useState<any[]>([]);
-  const [loadingProjects, setLoadingProjects] = useState(true);
-  useEffect(() => {
-    if (isOwnProfile && user) {
-      setLoadingProjects(true);
-      Promise.all([
-        getMyProjects().then(res => res.data.data || res.data).catch(() => []),
-        getMyCollaboratingProjects().then(res => res.data.data || res.data).catch(() => [])
-      ]).then(([my, collab]) => {
-        setMyProjects(my);
-        setCollaborations(collab);
-      }).finally(() => setLoadingProjects(false));
-    }
-  }, [isOwnProfile, user]);
+  const { myProjects, collaborations, loading: loadingProjects } = useProfileData(isOwnProfile, user);
 
   if (loading) {
     return (
