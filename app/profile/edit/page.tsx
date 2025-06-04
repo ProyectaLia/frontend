@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,26 +15,61 @@ import { X, Plus, Upload, ArrowLeft } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import Navbar from "@/components/Navbar"
 import ProtectedRoute from "@/components/ProtectedRoute"
-
-// Datos de ejemplo para el perfil
-const profileData = {
-  id: "1",
-  name: "Ana Rodríguez",
-  career: "Ingeniería en Sistemas Computacionales",
-  university: "Universidad Nacional Autónoma",
-  bio: "Estudiante de último año apasionada por el desarrollo web y la inteligencia artificial. Busco colaborar en proyectos innovadores que tengan impacto social.",
-  skills: ["React", "Node.js", "Python", "Machine Learning", "UI/UX Design", "MongoDB", "Express", "TypeScript", "Git"],
-  interests: ["Inteligencia Artificial", "Desarrollo Web", "Aplicaciones Móviles", "Sostenibilidad", "Educación"],
-  portfolio: "https://ana-rodriguez.dev",
-  github: "https://github.com/ana-rodriguez",
-  linkedin: "https://linkedin.com/in/ana-rodriguez",
-  twitter: "https://twitter.com/ana_rodriguez",
-}
+import { useAuth } from "@/src/context/AuthContext"
+import { updateUser } from "@/src/services/authService"
+import { useRouter } from "next/navigation"
 
 export default function EditProfilePage() {
-  const [formData, setFormData] = useState({ ...profileData })
+  const { user, loading, login } = useAuth();
+  const router = useRouter();
+  const [formData, setFormData] = useState(() => ({
+    id: user?.id || "",
+    name: user?.name || "",
+    career: user?.career || "",
+    university: user?.university || "",
+    bio: user?.bio || "",
+    skills: Array.isArray(user?.skills)
+      ? user.skills
+      : typeof user?.skills === "string"
+        ? user.skills.split(",").map((s: string) => s.trim()).filter(Boolean)
+        : [],
+    interests: Array.isArray(user?.interests)
+      ? user.interests
+      : typeof user?.interests === "string"
+        ? user.interests.split(",").map((i: string) => i.trim()).filter(Boolean)
+        : [],
+    portfolio: user?.portfolio || user?.portfolioLink || "",
+    github: user?.github || "",
+    linkedin: user?.linkedin || "",
+    twitter: user?.twitter || "",
+  }))
   const [newSkill, setNewSkill] = useState("")
   const [newInterest, setNewInterest] = useState("")
+
+  // Sincroniza el formulario si el usuario cambia
+  useEffect(() => {
+    setFormData({
+      id: user?.id || "",
+      name: user?.name || "",
+      career: user?.career || "",
+      university: user?.university || "",
+      bio: user?.bio || "",
+      skills: Array.isArray(user?.skills)
+        ? user.skills
+        : typeof user?.skills === "string"
+          ? user.skills.split(",").map((s: string) => s.trim()).filter(Boolean)
+          : [],
+      interests: Array.isArray(user?.interests)
+        ? user.interests
+        : typeof user?.interests === "string"
+          ? user.interests.split(",").map((i: string) => i.trim()).filter(Boolean)
+          : [],
+      portfolio: user?.portfolio || user?.portfolioLink || "",
+      github: user?.github || "",
+      linkedin: user?.linkedin || "",
+      twitter: user?.twitter || "",
+    })
+  }, [user])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -49,7 +84,7 @@ export default function EditProfilePage() {
   }
 
   const removeSkill = (skill: string) => {
-    setFormData((prev) => ({ ...prev, skills: prev.skills.filter((s) => s !== skill) }))
+    setFormData((prev) => ({ ...prev, skills: prev.skills.filter((s: string) => s !== skill) }))
   }
 
   const addInterest = () => {
@@ -60,17 +95,59 @@ export default function EditProfilePage() {
   }
 
   const removeInterest = (interest: string) => {
-    setFormData((prev) => ({ ...prev, interests: prev.interests.filter((i) => i !== interest) }))
+    setFormData((prev) => ({ ...prev, interests: prev.interests.filter((i: string) => i !== interest) }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Aquí iría la lógica para guardar los cambios
-    console.log("Guardando cambios:", formData)
-    toast({
-      title: "Perfil actualizado",
-      description: "Los cambios han sido guardados correctamente.",
-    })
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const confirmed = window.confirm("¿Estás seguro de que quieres guardar los cambios en tu perfil?");
+    if (!confirmed) return;
+    try {
+      const res = await updateUser({
+        ...formData,
+        // Convierte skills/interests a string para el backend
+        skills: Array.isArray(formData.skills) ? formData.skills.join(",") : formData.skills,
+        interests: Array.isArray(formData.interests) ? formData.interests.join(",") : formData.interests,
+      });
+      // Actualiza el contexto con los datos nuevos
+      const token = typeof window !== "undefined" ? localStorage.getItem("proyectalia_token") || "" : "";
+      login(res.data.data, token);
+      toast({
+        title: "Perfil actualizado",
+        description: "Los cambios han sido guardados correctamente.",
+      });
+      setTimeout(() => {
+        router.push(`/profile/${user.id}`);
+      }, 1200);
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.response?.data?.message || "No se pudo guardar el perfil.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+        <Navbar />
+        <div className="text-center w-full">
+          <span className="text-lg text-gray-600">Cargando perfil...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+        <Navbar />
+        <div className="text-center w-full">
+          <span className="text-lg text-gray-600">No autorizado</span>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -101,7 +178,7 @@ export default function EditProfilePage() {
                     <AvatarFallback className="text-2xl bg-purple-100 text-purple-600">
                       {formData.name
                         .split(" ")
-                        .map((n) => n[0])
+                        .map((n: string) => n[0])
                         .join("")}
                     </AvatarFallback>
                   </Avatar>
@@ -186,7 +263,7 @@ export default function EditProfilePage() {
               <div className="space-y-4">
                 <Label>Habilidades</Label>
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {formData.skills.map((skill) => (
+                  {formData.skills.map((skill: string) => (
                     <Badge
                       key={skill}
                       variant="secondary"
@@ -219,7 +296,7 @@ export default function EditProfilePage() {
               <div className="space-y-4">
                 <Label>Áreas de Interés para Proyectos</Label>
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {formData.interests.map((interest) => (
+                  {formData.interests.map((interest: string) => (
                     <Badge
                       key={interest}
                       variant="secondary"
