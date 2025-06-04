@@ -1,8 +1,7 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,13 +9,12 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { X, Plus, ArrowLeft } from "lucide-react"
-import { toast } from "@/components/ui/use-toast"
+import { X, Plus, ArrowLeft, Trash2 } from "lucide-react"
 import Navbar from "@/components/Navbar"
 import ProtectedRoute from "@/components/ProtectedRoute"
-import { useRouter } from "next/navigation"
-import { createProject } from "@/src/services/projectService"
+import { getProjectById, updateProject, deleteProject } from "@/src/services/projectService"
+import { toast } from "@/components/ui/use-toast"
+import { useAuth } from "@/src/context/AuthContext"
 
 const areaOptions = [
   "Tecnología Verde",
@@ -31,7 +29,12 @@ const areaOptions = [
   "Otro",
 ]
 
-export default function CreateProjectPage() {
+export default function EditProjectPage() {
+  const router = useRouter()
+  const params = useParams()
+  const projectId = params?.id as string
+  const { user, loading: authLoading } = useAuth()
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -41,28 +44,53 @@ export default function CreateProjectPage() {
   })
   const [skills, setSkills] = useState<string[]>([])
   const [newSkill, setNewSkill] = useState("")
-  const router = useRouter()
+  const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
+  const [deleting, setDeleting] = useState(false)
+  const [creatorId, setCreatorId] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!projectId) return
+    setLoading(true)
+    getProjectById(projectId)
+      .then(res => {
+        const p = res.data.data || res.data
+        setFormData({
+          title: p.title || "",
+          description: p.description || "",
+          objectives: p.objectives || "",
+          area: p.areaTheme || "",
+          collaboratorsNeeded: String(p.collaboratorsNeeded ?? 1),
+        })
+        setSkills((p.requiredSkills ?? p.skills ?? "").split(",").map((s: string) => s.trim()).filter(Boolean))
+        setCreatorId(p.creator?.id ?? null)
+      })
+      .catch(() => setError("No se pudo cargar el proyecto."))
+      .finally(() => setLoading(false))
+  }, [projectId])
+
+  // Seguridad: solo el creador puede editar
+  const isCreator = user && creatorId && Number(user.id) === Number(creatorId)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const addSkill = () => {
     if (newSkill && !skills.includes(newSkill)) {
-      setSkills((prev) => [...prev, newSkill])
+      setSkills(prev => [...prev, newSkill])
       setNewSkill("")
     }
   }
 
   const removeSkill = (skill: string) => {
-    setSkills((prev) => prev.filter((s) => s !== skill))
+    setSkills(prev => prev.filter(s => s !== skill))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,37 +106,87 @@ export default function CreateProjectPage() {
         areaTheme: formData.area,
         collaboratorsNeeded: Number(formData.collaboratorsNeeded),
       }
-      await createProject(projectData)
-      toast({
-        title: "Proyecto creado",
-        description: "Tu proyecto ha sido publicado correctamente.",
-      })
+      await updateProject(projectId, projectData)
+      toast({ title: "Proyecto actualizado", description: "Los cambios se guardaron correctamente." })
       router.push("/my-projects")
     } catch (err: any) {
-      setError(err.response?.data?.message || "Error al crear el proyecto.")
+      setError(err.response?.data?.message || "Error al actualizar el proyecto.")
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar este proyecto? Esta acción no se puede deshacer.")) return
+    setDeleting(true)
+    try {
+      await deleteProject(projectId)
+      toast({ title: "Proyecto eliminado", description: "El proyecto ha sido eliminado." })
+      router.push("/my-projects")
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error al eliminar el proyecto.")
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-purple-100 rounded-full flex items-center justify-center animate-pulse">
+            <Plus className="h-8 w-8 text-purple-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Cargando proyecto...</h2>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isCreator) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+              <X className="h-8 w-8 text-red-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">No tienes permiso para editar este proyecto.</h2>
+            <Button asChild className="mt-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+              <Link href="/my-projects">Volver a Mis Proyectos</Link>
+            </Button>
+          </div>
+        </div>
+      </ProtectedRoute>
+    )
   }
 
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
         <Navbar />
-
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center mb-6">
-            <Link href="/" className="text-purple-600 hover:text-purple-800 mr-3">
+            <Link href="/my-projects" className="text-purple-600 hover:text-purple-800 mr-3">
               <ArrowLeft size={20} />
             </Link>
-            <h1 className="text-3xl font-bold text-gray-900">Publica tu Idea de Proyecto</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Editar Proyecto</h1>
+            <Button
+              type="button"
+              variant="destructive"
+              className="ml-auto flex items-center gap-2"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              <Trash2 size={18} />
+              {deleting ? "Eliminando..." : "Eliminar"}
+            </Button>
           </div>
-
           <form onSubmit={handleSubmit}>
             <Card className="mb-8 border-0 shadow-lg">
               <CardHeader>
                 <CardTitle>Información Básica</CardTitle>
-                <CardDescription>Proporciona los detalles principales de tu proyecto</CardDescription>
+                <CardDescription>Edita los detalles principales de tu proyecto</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
@@ -118,12 +196,9 @@ export default function CreateProjectPage() {
                     name="title"
                     value={formData.title}
                     onChange={handleChange}
-                    placeholder="Ej. EcoTrack - App de Sostenibilidad"
-                    className="h-11"
                     required
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="description">Descripción Detallada</Label>
                   <Textarea
@@ -131,12 +206,10 @@ export default function CreateProjectPage() {
                     name="description"
                     value={formData.description}
                     onChange={handleChange}
-                    placeholder="Describe tu proyecto, su propósito, alcance y cualquier otra información relevante..."
                     rows={6}
                     required
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="objectives">Objetivos Principales</Label>
                   <Textarea
@@ -144,7 +217,6 @@ export default function CreateProjectPage() {
                     name="objectives"
                     value={formData.objectives}
                     onChange={handleChange}
-                    placeholder="Lista los objetivos principales de tu proyecto, uno por línea..."
                     rows={4}
                     required
                   />
@@ -152,11 +224,10 @@ export default function CreateProjectPage() {
                 </div>
               </CardContent>
             </Card>
-
             <Card className="mb-8 border-0 shadow-lg">
               <CardHeader>
                 <CardTitle>Requisitos y Categorización</CardTitle>
-                <CardDescription>Define las habilidades necesarias y categoriza tu proyecto</CardDescription>
+                <CardDescription>Edita las habilidades necesarias y el área temática</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
@@ -191,91 +262,52 @@ export default function CreateProjectPage() {
                     </Button>
                   </div>
                   <p className="text-sm text-gray-500">
-                    Agrega las habilidades que los colaboradores deberían tener para contribuir a tu proyecto.
+                    Agrega o elimina las habilidades que los colaboradores deberían tener para contribuir a tu proyecto.
                   </p>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="area">Área Temática</Label>
-                    <Select value={formData.area} onValueChange={(value) => handleSelectChange("area", value)} required>
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Selecciona un área" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {areaOptions.map((area) => (
-                          <SelectItem key={area} value={area}>
-                            {area}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="collaboratorsNeeded">Número de Colaboradores Buscados</Label>
-                    <Select
-                      value={formData.collaboratorsNeeded}
-                      onValueChange={(value) => handleSelectChange("collaboratorsNeeded", value)}
+                    <select
+                      id="area"
+                      name="area"
+                      value={formData.area}
+                      onChange={e => handleSelectChange("area", e.target.value)}
+                      className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base"
                       required
                     >
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Selecciona un número" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                          <SelectItem key={num} value={num.toString()}>
-                            {num}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <option value="">Selecciona un área</option>
+                      {areaOptions.map(area => (
+                        <option key={area} value={area}>{area}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="collaboratorsNeeded">Colaboradores Necesarios</Label>
+                    <Input
+                      id="collaboratorsNeeded"
+                      name="collaboratorsNeeded"
+                      type="number"
+                      min={1}
+                      value={formData.collaboratorsNeeded}
+                      onChange={handleChange}
+                      className="h-11"
+                      required
+                    />
                   </div>
                 </div>
               </CardContent>
             </Card>
-
-            {error && <div className="text-red-600 text-sm mb-4">{error}</div>}
-            <div className="flex justify-end space-x-4">
-              <Button type="button" variant="outline" asChild disabled={submitting}>
-                <Link href="/">Cancelar</Link>
-              </Button>
-              <Button
-                type="submit"
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-                disabled={submitting}
-              >
-                {submitting ? "Publicando..." : "Publicar Proyecto"}
+            {error && <div className="text-red-600 mb-4">{error}</div>}
+            <div className="flex justify-end gap-4">
+              <Button type="button" variant="secondary" onClick={() => router.push("/my-projects")}>Cancelar</Button>
+              <Button type="submit" className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white" disabled={submitting}>
+                {submitting ? "Guardando..." : "Guardar Cambios"}
               </Button>
             </div>
           </form>
         </main>
-
-        {/* Footer */}
-        <footer className="bg-white border-t border-purple-100 mt-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <div className="flex items-center space-x-2 mb-4 md:mb-0">
-                <div className="w-6 h-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-md flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">PH</span>
-                </div>
-                <span className="font-semibold text-gray-900">ProyectaLia Hub</span>
-              </div>
-              <div className="flex space-x-6 text-sm text-gray-600">
-                <Link href="/about" className="hover:text-purple-600 transition-colors">
-                  Acerca de
-                </Link>
-                <Link href="/contact" className="hover:text-purple-600 transition-colors">
-                  Contacto
-                </Link>
-                <Link href="/terms" className="hover:text-purple-600 transition-colors">
-                  Términos y Condiciones
-                </Link>
-              </div>
-            </div>
-          </div>
-        </footer>
       </div>
     </ProtectedRoute>
   )
-}
+} 

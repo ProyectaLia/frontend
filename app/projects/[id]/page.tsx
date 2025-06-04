@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { use, useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -18,55 +18,139 @@ import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Edit, Users, Calendar, MessageSquare } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import Navbar from "@/components/Navbar"
+import { useRouter } from "next/navigation"
+import { getProjectById } from "@/src/services/projectService"
+import { useAuth } from "@/src/context/AuthContext"
+import { createCollaborationRequest, getMySentCollaborationRequests } from "@/src/services/requestService"
 
-// Datos de ejemplo para el proyecto
-const projectData = {
-  id: "1",
-  title: "EcoTrack - App de Sostenibilidad",
-  creator: {
-    id: "1",
-    name: "María González",
-    avatar: "/placeholder-user.jpg",
-  },
-  createdAt: "2023-10-15",
-  description:
-    "EcoTrack es una aplicación móvil diseñada para ayudar a los estudiantes universitarios a rastrear y gamificar sus hábitos ecológicos en el campus. La aplicación permitirá a los usuarios registrar acciones sostenibles como reciclaje, uso de transporte público, reducción de consumo de plásticos, etc., y ganar puntos que pueden ser canjeados por beneficios en el campus.",
-  objectives: [
-    "Desarrollar una interfaz de usuario intuitiva y atractiva para fomentar el uso continuo.",
-    "Implementar un sistema de gamificación que motive a los estudiantes a adoptar hábitos sostenibles.",
-    "Crear un dashboard para visualizar el impacto ambiental colectivo del campus.",
-    "Integrar un sistema de recompensas que permita canjear puntos por beneficios reales en el campus.",
-    "Implementar funcionalidades sociales para que los estudiantes puedan compartir sus logros y competir amistosamente.",
-  ],
-  skills: ["React Native", "Node.js", "MongoDB", "UX/UI Design", "Gamification", "Firebase", "Express.js", "Git"],
-  area: "Tecnología Verde",
-  status: "Buscando Colaboradores",
-  collaboratorsNeeded: 3,
-  collaborators: [
-    {
-      id: "2",
-      name: "Carlos Mendoza",
-      role: "Backend Developer",
-      avatar: "/placeholder-user.jpg",
-    },
-  ],
-  isCreator: true, // Simulando que el usuario actual es el creador
+// Utilidad para mostrar el estado en formato legible
+function getStatusLabel(status: string) {
+  switch (status) {
+    case "BUSCANDO_COLABORADORES":
+      return "Buscando Colaboradores"
+    case "EN_DESARROLLO":
+      return "En Desarrollo"
+    case "COMPLETADO":
+      return "Completado"
+    default:
+      return status
+        ? status
+            .toLowerCase()
+            .replace(/_/g, " ")
+            .replace(/(^|\s)\S/g, (l) => l.toUpperCase())
+        : "Desconocido"
+  }
 }
 
-export default function ProjectDetailPage({ params }: { params: { id: string } }) {
-  // En una aplicación real, usaríamos params.id para obtener los datos del proyecto
+export default function ProjectDetailPage({ params }: { params: Record<string, string> }) {
+  const { id } = use(params)
+  const [project, setProject] = useState<any | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
   const [applicationMessage, setApplicationMessage] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const router = useRouter()
+  const { user, isAuthenticated } = useAuth();
+  const [showApplicationForm, setShowApplicationForm] = useState(false);
+  const [applicationStatus, setApplicationStatus] = useState<{ message: string, type: string }>({ message: "", type: "" });
+  const [myRequestForThisProject, setMyRequestForThisProject] = useState<any | null>(null);
 
-  const handleApply = () => {
-    // Aquí iría la lógica para enviar la solicitud
-    console.log("Enviando solicitud:", applicationMessage)
-    setIsDialogOpen(false)
-    toast({
-      title: "Solicitud enviada",
-      description: "Tu solicitud ha sido enviada correctamente. Te notificaremos cuando haya una respuesta.",
-    })
+  // Consulta si el usuario ya tiene una solicitud para este proyecto
+  useEffect(() => {
+    if (!user || !project) return;
+    getMySentCollaborationRequests().then(res => {
+      const requests = res.data.data || res.data || [];
+      const found = requests.find((r: any) => r.project?.id === project.id);
+      setMyRequestForThisProject(found || null);
+    });
+  }, [user, project]);
+
+  // Solo puede postular si no es el creador, el proyecto acepta colaboradores y no tiene solicitud previa
+  const canApply =
+    isAuthenticated &&
+    user &&
+    project &&
+    project.creator &&
+    project.creator.id !== user.id &&
+    (project.status === "BUSCANDO_COLABORADORES" || project.status === "Buscando Colaboradores") &&
+    !myRequestForThisProject;
+
+  // Mensaje si ya postuló
+  let alreadyAppliedMsg = "";
+  if (myRequestForThisProject) {
+    if (myRequestForThisProject.status === "PENDIENTE") {
+      alreadyAppliedMsg = "Ya enviaste una solicitud para este proyecto. Está pendiente de revisión.";
+    } else if (myRequestForThisProject.status === "ACEPTADA") {
+      alreadyAppliedMsg = "¡Ya eres colaborador de este proyecto!";
+    } else if (myRequestForThisProject.status === "RECHAZADA") {
+      alreadyAppliedMsg = "No puedes volver a postular a este proyecto porque tu solicitud fue rechazada.";
+    }
   }
+
+  useEffect(() => {
+    const fetchProject = async () => {
+      setLoading(true)
+      setError("")
+      try {
+        const res = await getProjectById(id)
+        setProject(res.data.data || res.data)
+      } catch (err: any) {
+        setError(err.response?.data?.message || "Error al cargar el proyecto.")
+      } finally {
+        setLoading(false)
+      }
+    }
+    if (id) fetchProject()
+  }, [id])
+
+  if (loading) return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+      <Navbar />
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center py-12">
+          <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MessageSquare className="h-12 w-12 text-purple-400 animate-pulse" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Cargando proyecto...</h3>
+        </div>
+      </main>
+    </div>
+  )
+  if (error || !project) return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+      <Navbar />
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center py-12">
+          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MessageSquare className="h-12 w-12 text-red-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">{error || "Proyecto no encontrado."}</h3>
+        </div>
+      </main>
+    </div>
+  )
+
+  const handleApply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setApplicationStatus({ message: "", type: "" });
+    try {
+      await createCollaborationRequest(project.id, applicationMessage);
+      setApplicationStatus({ message: "¡Solicitud enviada exitosamente!", type: "success" });
+      setShowApplicationForm(false);
+      setApplicationMessage("");
+      toast({ title: "Solicitud enviada", description: "Tu solicitud fue enviada correctamente." });
+      // Actualiza el estado de la solicitud en tiempo real
+      const res = await getMySentCollaborationRequests();
+      const requests = res.data.data || res.data || [];
+      const found = requests.find((r: any) => r.project?.id === project.id);
+      setMyRequestForThisProject(found || null);
+    } catch (err: any) {
+      setApplicationStatus({
+        message: err.response?.data?.message || "Error al enviar la solicitud.",
+        type: "error",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
@@ -87,43 +171,43 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <Badge
-                  variant={projectData.status === "Buscando Colaboradores" ? "default" : "secondary"}
+                  variant={getStatusLabel(project.status) === "Buscando Colaboradores" ? "default" : "secondary"}
                   className={
-                    projectData.status === "Buscando Colaboradores"
+                    getStatusLabel(project.status) === "Buscando Colaboradores"
                       ? "bg-emerald-100 text-emerald-700"
                       : "bg-orange-100 text-orange-700"
                   }
                 >
-                  {projectData.status}
+                  {getStatusLabel(project.status)}
                 </Badge>
                 <Badge variant="outline" className="border-purple-200 text-purple-700">
-                  {projectData.area}
+                  {project.areaTheme || project.area || "Sin área"}
                 </Badge>
               </div>
 
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{projectData.title}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{project.title}</h1>
 
               <div className="flex items-center gap-3">
-                <Link href={`/profile/${projectData.creator.id}`} className="flex items-center gap-2 group">
+                <Link href={`/profile/${project.creator.id}`} className="flex items-center gap-2 group">
                   <Avatar className="h-8 w-8">
                     <AvatarImage
-                      src={projectData.creator.avatar || "/placeholder.svg"}
-                      alt={projectData.creator.name}
+                      src={project.creator.avatar || "/placeholder.svg"}
+                      alt={project.creator.name}
                     />
                     <AvatarFallback className="bg-purple-100 text-purple-600">
-                      {projectData.creator.name
+                      {project.creator.name
                         .split(" ")
-                        .map((n) => n[0])
+                        .map((n: string) => n[0])
                         .join("")}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-purple-600 group-hover:text-purple-800 transition-colors font-medium">
-                    {projectData.creator.name}
+                    {project.creator.name}
                   </span>
                 </Link>
                 <span className="text-gray-500 flex items-center">
                   <Calendar size={16} className="mr-1" />
-                  {new Date(projectData.createdAt).toLocaleDateString("es-ES", {
+                  {new Date(project.createdAt).toLocaleDateString("es-ES", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
@@ -133,10 +217,10 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
             </div>
 
             <div className="flex flex-wrap gap-3">
-              {projectData.isCreator ? (
+              {project.isCreator ? (
                 <>
                   <Button asChild variant="outline" className="border-purple-200 text-purple-700 hover:bg-purple-50">
-                    <Link href={`/projects/${projectData.id}/edit`}>
+                    <Link href={`/projects/${project.id}/edit`}>
                       <Edit size={16} className="mr-2" />
                       Editar Proyecto
                     </Link>
@@ -145,49 +229,45 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                     asChild
                     className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
                   >
-                    <Link href={`/projects/${projectData.id}/applications`}>
+                    <Link href={`/projects/${project.id}/applications`}>
                       <Users size={16} className="mr-2" />
                       Ver Solicitudes
                     </Link>
                   </Button>
                 </>
               ) : (
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white">
+                <>
+                  {canApply && !showApplicationForm && (
+                    <Button onClick={() => setShowApplicationForm(true)} className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
                       Postularme a este Proyecto
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                      <DialogTitle>Postularte para {projectData.title}</DialogTitle>
-                      <DialogDescription>
-                        Envía un mensaje al creador del proyecto explicando por qué te interesa y cómo puedes
-                        contribuir.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
+                  )}
+                  {showApplicationForm && canApply && (
+                    <form onSubmit={handleApply} className="mt-4 space-y-2">
                       <Textarea
-                        placeholder="Cuéntanos por qué te interesa este proyecto y qué habilidades puedes aportar..."
                         value={applicationMessage}
-                        onChange={(e) => setApplicationMessage(e.target.value)}
-                        rows={6}
-                        className="resize-none"
+                        onChange={e => setApplicationMessage(e.target.value)}
+                        placeholder="Mensaje de motivación (opcional)"
+                        rows={3}
+                        className="w-full"
                       />
+                      <div className="flex gap-2">
+                        <Button type="submit" className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">Enviar</Button>
+                        <Button type="button" variant="secondary" onClick={() => setShowApplicationForm(false)}>Cancelar</Button>
+                      </div>
+                      {applicationStatus.message && (
+                        <p className={applicationStatus.type === "error" ? "text-red-600" : "text-green-600"}>
+                          {applicationStatus.message}
+                        </p>
+                      )}
+                    </form>
+                  )}
+                  {!canApply && alreadyAppliedMsg && (
+                    <div className="mt-4 text-sm text-gray-600 bg-gray-100 rounded-lg p-3 border border-gray-200">
+                      {alreadyAppliedMsg}
                     </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                        Cancelar
-                      </Button>
-                      <Button
-                        onClick={handleApply}
-                        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-                      >
-                        Enviar Solicitud
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -200,21 +280,25 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
             {/* Descripción */}
             <div className="bg-white rounded-xl shadow-md p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Descripción del Proyecto</h2>
-              <p className="text-gray-700 whitespace-pre-line">{projectData.description}</p>
+              <p className="text-gray-700 whitespace-pre-line">{project.description}</p>
             </div>
 
             {/* Objetivos */}
             <div className="bg-white rounded-xl shadow-md p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Objetivos Principales</h2>
               <ul className="space-y-3">
-                {projectData.objectives.map((objective, index) => (
-                  <li key={index} className="flex items-start">
-                    <span className="flex-shrink-0 h-6 w-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mr-3 mt-0.5 font-medium text-sm">
-                      {index + 1}
-                    </span>
-                    <span className="text-gray-700">{objective}</span>
-                  </li>
-                ))}
+                {(project.objectives ?? "")
+                  .split("\n")
+                  .map((objective: string) => objective.trim())
+                  .filter(Boolean)
+                  .map((objective: string, index: number) => (
+                    <li key={index} className="flex items-start">
+                      <span className="flex-shrink-0 h-6 w-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mr-3 mt-0.5 font-medium text-sm">
+                        {index + 1}
+                      </span>
+                      <span className="text-gray-700">{objective}</span>
+                    </li>
+                  ))}
               </ul>
             </div>
 
@@ -226,18 +310,18 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
                       <AvatarImage
-                        src={projectData.creator.avatar || "/placeholder.svg"}
-                        alt={projectData.creator.name}
+                        src={project.creator.avatar || "/placeholder.svg"}
+                        alt={project.creator.name}
                       />
                       <AvatarFallback className="bg-purple-100 text-purple-600">
-                        {projectData.creator.name
+                        {project.creator.name
                           .split(" ")
-                          .map((n) => n[0])
+                          .map((n: string) => n[0])
                           .join("")}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-medium text-gray-900">{projectData.creator.name}</p>
+                      <p className="font-medium text-gray-900">{project.creator.name}</p>
                       <p className="text-sm text-purple-600">Líder del Proyecto</p>
                     </div>
                   </div>
@@ -246,7 +330,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                   </Badge>
                 </div>
 
-                {projectData.collaborators.map((collaborator) => (
+                {project.collaborators.map((collaborator: any) => (
                   <div key={collaborator.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
@@ -254,7 +338,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                         <AvatarFallback className="bg-indigo-100 text-indigo-600">
                           {collaborator.name
                             .split(" ")
-                            .map((n) => n[0])
+                            .map((n: string) => n[0])
                             .join("")}
                         </AvatarFallback>
                       </Avatar>
@@ -269,11 +353,11 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                   </div>
                 ))}
 
-                {projectData.collaboratorsNeeded > 0 && (
+                {project.collaboratorsNeeded > 0 && (
                   <div className="p-4 border border-dashed border-gray-300 rounded-lg text-center">
                     <p className="text-gray-600">
                       <Users size={20} className="inline mr-2 text-gray-400" />
-                      Buscando {projectData.collaboratorsNeeded} colaboradores más
+                      Buscando {project.collaboratorsNeeded} colaboradores más
                     </p>
                   </div>
                 )}
@@ -287,7 +371,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
             <div className="bg-white rounded-xl shadow-md p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-3">Habilidades Requeridas</h2>
               <div className="flex flex-wrap gap-2">
-                {projectData.skills.map((skill) => (
+                {((project.requiredSkills ?? project.skills ?? '').split(',').map((s: string) => s.trim()).filter(Boolean)).map((skill: string) => (
                   <Badge key={skill} variant="secondary" className="bg-purple-100 text-purple-700">
                     {skill}
                   </Badge>
@@ -301,20 +385,20 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Área Temática:</span>
-                  <span className="font-medium text-gray-900">{projectData.area}</span>
+                  <span className="font-medium text-gray-900">{project.areaTheme || project.area || "Sin área"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Estado:</span>
-                  <span className="font-medium text-gray-900">{projectData.status}</span>
+                  <span className="font-medium text-gray-900">{getStatusLabel(project.status)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Colaboradores Necesarios:</span>
-                  <span className="font-medium text-gray-900">{projectData.collaboratorsNeeded}</span>
+                  <span className="font-medium text-gray-900">{project.collaboratorsNeeded}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Fecha de Publicación:</span>
                   <span className="font-medium text-gray-900">
-                    {new Date(projectData.createdAt).toLocaleDateString("es-ES")}
+                    {new Date(project.createdAt).toLocaleDateString("es-ES")}
                   </span>
                 </div>
               </div>

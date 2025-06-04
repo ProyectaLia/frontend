@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,65 +10,47 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Edit, Users, Plus, Search } from "lucide-react"
 import Navbar from "@/components/Navbar"
 import ProtectedRoute from "@/components/ProtectedRoute"
-
-// Datos de ejemplo para los proyectos
-const myProjects = [
-  {
-    id: "1",
-    title: "EcoTrack - App de Sostenibilidad",
-    description: "Aplicación móvil para rastrear y gamificar hábitos ecológicos en el campus universitario.",
-    skills: ["React Native", "Node.js", "MongoDB", "UX/UI Design"],
-    area: "Tecnología Verde",
-    status: "Buscando Colaboradores",
-    collaboratorsNeeded: 3,
-    applicationsCount: 5,
-    collaborators: [
-      {
-        id: "2",
-        name: "Carlos Mendoza",
-        avatar: "/placeholder-user.jpg",
-      },
-    ],
-  },
-  {
-    id: "2",
-    title: "StudyBuddy - Plataforma de Estudio",
-    description: "Red social para formar grupos de estudio y compartir recursos académicos entre estudiantes.",
-    skills: ["React", "Python", "PostgreSQL", "Machine Learning"],
-    area: "Educación",
-    status: "En Desarrollo",
-    collaboratorsNeeded: 0,
-    applicationsCount: 0,
-    collaborators: [
-      {
-        id: "2",
-        name: "Carlos Mendoza",
-        avatar: "/placeholder-user.jpg",
-      },
-      {
-        id: "3",
-        name: "Ana Rodríguez",
-        avatar: "/placeholder-user.jpg",
-      },
-    ],
-  },
-]
-
-const collaboratingProjects = [
-  {
-    id: "3",
-    title: "MindWell - Salud Mental Estudiantil",
-    creator: "Diego Herrera",
-    description: "App de bienestar mental con recursos, meditación guiada y conexión con profesionales.",
-    skills: ["Vue.js", "Express.js", "Psicología", "Content Writing"],
-    area: "Salud y Bienestar",
-    status: "En Desarrollo",
-    role: "UX/UI Designer",
-  },
-]
+import { getMyProjects, getMyCollaboratingProjects } from "@/src/services/projectService"
+import { useAuth } from "@/src/context/AuthContext"
 
 export default function MyProjectsPage() {
   const [activeTab, setActiveTab] = useState("created")
+  const [myProjects, setMyProjects] = useState<any[]>([])
+  const [collaboratingProjects, setCollaboratingProjects] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const { loading: authLoading, isAuthenticated } = useAuth()
+
+  useEffect(() => {
+    if (authLoading) return // Espera a que AuthContext termine de cargar
+    if (!isAuthenticated) return // No intentes cargar si no está autenticado
+    setLoading(true)
+    setError("")
+    Promise.all([
+      getMyProjects().then(res => res.data.data || res.data).catch(() => []),
+      getMyCollaboratingProjects().then(res => res.data.data || res.data).catch(() => [])
+    ])
+      .then(([my, collab]) => {
+        setMyProjects(my)
+        setCollaboratingProjects(collab)
+      })
+      .catch(() => setError("Error al cargar tus proyectos"))
+      .finally(() => setLoading(false))
+  }, [authLoading, isAuthenticated])
+
+  // Agrega función para mostrar el estado de forma amigable
+  function getStatusLabel(status: string) {
+    switch ((status || '').toUpperCase()) {
+      case 'BUSCANDO_COLABORADORES':
+        return 'Buscando Colaboradores';
+      case 'EN_DESARROLLO':
+        return 'En Desarrollo';
+      case 'FINALIZADO':
+        return 'Finalizado';
+      default:
+        return status || 'Desconocido';
+    }
+  }
 
   return (
     <ProtectedRoute>
@@ -99,28 +81,36 @@ export default function MyProjectsPage() {
             </TabsList>
 
             <TabsContent value="created">
-              {myProjects.length > 0 ? (
+              {loading ? (
+                <div className="text-center py-16 bg-white rounded-xl shadow-md">
+                  <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Plus className="h-10 w-10 text-purple-600 animate-pulse" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Cargando proyectos...</h3>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">{error ? error : "Por favor, espera mientras se cargan tus proyectos."}</p>
+                </div>
+              ) : myProjects.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {myProjects.map((project) => (
                     <Card key={project.id} className="hover:shadow-xl transition-all duration-300 border-0 shadow-lg">
                       <CardHeader className="pb-4">
                         <div className="flex items-start justify-between mb-2">
                           <Badge
-                            variant={project.status === "Buscando Colaboradores" ? "default" : "secondary"}
+                            variant={getStatusLabel(project.status) === "Buscando Colaboradores" ? "default" : "secondary"}
                             className={
-                              project.status === "Buscando Colaboradores"
+                              getStatusLabel(project.status) === "Buscando Colaboradores"
                                 ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                                 : "bg-orange-100 text-orange-700"
                             }
                           >
-                            {project.status}
+                            {getStatusLabel(project.status)}
                           </Badge>
                         </div>
                         <CardTitle className="text-xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">
                           {project.title}
                         </CardTitle>
                         <CardDescription className="text-gray-600">
-                          {project.collaborators.length} colaboradores
+                          {(project.collaborators?.length ?? 0)} colaboradores
                           {project.collaboratorsNeeded > 0 && ` • Buscando ${project.collaboratorsNeeded} más`}
                         </CardDescription>
                       </CardHeader>
@@ -130,14 +120,14 @@ export default function MyProjectsPage() {
                         <div>
                           <p className="text-sm font-medium text-gray-900 mb-2">Habilidades Requeridas:</p>
                           <div className="flex flex-wrap gap-2">
-                            {project.skills.slice(0, 3).map((skill) => (
+                            {((project.requiredSkills ?? project.skills ?? '').split(',').map((skill: string) => skill.trim()).filter(Boolean)).slice(0, 3).map((skill: string) => (
                               <Badge key={skill} variant="outline" className="text-xs border-purple-200 text-purple-700">
                                 {skill}
                               </Badge>
                             ))}
-                            {project.skills.length > 3 && (
+                            {((project.requiredSkills ?? project.skills ?? '').split(',').map((skill: string) => skill.trim()).filter(Boolean)).length > 3 && (
                               <Badge variant="outline" className="text-xs border-gray-200 text-gray-600">
-                                +{project.skills.length - 3} más
+                                +{((project.requiredSkills ?? project.skills ?? '').split(',').map((skill: string) => skill.trim()).filter(Boolean)).length - 3} más
                               </Badge>
                             )}
                           </div>
@@ -200,21 +190,29 @@ export default function MyProjectsPage() {
             </TabsContent>
 
             <TabsContent value="collaborating">
-              {collaboratingProjects.length > 0 ? (
+              {loading ? (
+                <div className="text-center py-16 bg-white rounded-xl shadow-md">
+                  <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="h-10 w-10 text-purple-600 animate-pulse" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Cargando colaboraciones...</h3>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">{error ? error : "Por favor, espera mientras se cargan tus colaboraciones."}</p>
+                </div>
+              ) : collaboratingProjects.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {collaboratingProjects.map((project) => (
                     <Card key={project.id} className="hover:shadow-xl transition-all duration-300 border-0 shadow-lg">
                       <CardHeader className="pb-4">
                         <div className="flex items-start justify-between mb-2">
                           <Badge
-                            variant={project.status === "Buscando Colaboradores" ? "default" : "secondary"}
+                            variant={getStatusLabel(project.status) === "Buscando Colaboradores" ? "default" : "secondary"}
                             className={
-                              project.status === "Buscando Colaboradores"
+                              getStatusLabel(project.status) === "Buscando Colaboradores"
                                 ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                                 : "bg-orange-100 text-orange-700"
                             }
                           >
-                            {project.status}
+                            {getStatusLabel(project.status)}
                           </Badge>
                           <Badge variant="outline" className="border-indigo-200 text-indigo-700">
                             {project.role}
@@ -233,14 +231,14 @@ export default function MyProjectsPage() {
                         <div>
                           <p className="text-sm font-medium text-gray-900 mb-2">Habilidades Requeridas:</p>
                           <div className="flex flex-wrap gap-2">
-                            {project.skills.slice(0, 3).map((skill) => (
+                            {((project.requiredSkills ?? project.skills ?? '').split(',').map((skill: string) => skill.trim()).filter(Boolean)).slice(0, 3).map((skill: string) => (
                               <Badge key={skill} variant="outline" className="text-xs border-purple-200 text-purple-700">
                                 {skill}
                               </Badge>
                             ))}
-                            {project.skills.length > 3 && (
+                            {((project.requiredSkills ?? project.skills ?? '').split(',').map((skill: string) => skill.trim()).filter(Boolean)).length > 3 && (
                               <Badge variant="outline" className="text-xs border-gray-200 text-gray-600">
-                                +{project.skills.length - 3} más
+                                +{((project.requiredSkills ?? project.skills ?? '').split(',').map((skill: string) => skill.trim()).filter(Boolean)).length - 3} más
                               </Badge>
                             )}
                           </div>

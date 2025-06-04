@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,54 +9,27 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Search, Calendar, MessageSquare } from "lucide-react"
 import Navbar from "@/components/Navbar"
 import ProtectedRoute from "@/components/ProtectedRoute"
-
-// Datos de ejemplo para las solicitudes
-const applications = [
-  {
-    id: "1",
-    projectId: "3",
-    projectTitle: "MindWell - Salud Mental Estudiantil",
-    projectCreator: "Diego Herrera",
-    creatorAvatar: "/placeholder-user.jpg",
-    message:
-      "Me interesa mucho este proyecto porque tengo experiencia en diseño UX/UI y me apasiona la salud mental. He trabajado en proyectos similares y creo que puedo aportar mucho al diseño de la interfaz y la experiencia de usuario.",
-    status: "Aceptada",
-    appliedAt: "2023-10-20",
-    respondedAt: "2023-10-22",
-  },
-  {
-    id: "2",
-    projectId: "4",
-    projectTitle: "CampusFood - Delivery Universitario",
-    projectCreator: "Ana Rodríguez",
-    creatorAvatar: "/placeholder-user.jpg",
-    message:
-      "Tengo experiencia en desarrollo con Flutter y me encantaría colaborar en este proyecto. Además, he trabajado en proyectos de e-commerce anteriormente.",
-    status: "Pendiente",
-    appliedAt: "2023-10-25",
-    respondedAt: null,
-  },
-  {
-    id: "3",
-    projectId: "5",
-    projectTitle: "BiblioTech - Biblioteca Digital Universitaria",
-    projectCreator: "Javier Méndez",
-    creatorAvatar: "/placeholder-user.jpg",
-    message:
-      "Me interesa este proyecto porque tengo experiencia en desarrollo web y bases de datos. Me gustaría contribuir en la parte backend del sistema.",
-    status: "Rechazada",
-    appliedAt: "2023-10-18",
-    respondedAt: "2023-10-23",
-  },
-]
+import { getMySentCollaborationRequests } from "@/src/services/requestService"
 
 export default function MyApplicationsPage() {
+  const [requests, setRequests] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
   const [filter, setFilter] = useState("all")
 
-  const filteredApplications = applications.filter((app) => {
-    if (filter === "all") return true
-    return app.status.toLowerCase() === filter.toLowerCase()
-  })
+  useEffect(() => {
+    setLoading(true)
+    getMySentCollaborationRequests()
+      .then(res => setRequests(res.data.data || res.data))
+      .catch(() => setError("Error al cargar tus solicitudes enviadas."))
+      .finally(() => setLoading(false))
+  }, [])
+
+  // Filtrado de solicitudes según el filtro seleccionado
+  const filteredRequests =
+    filter === "all"
+      ? requests
+      : requests.filter((req) => req.status?.toLowerCase() === filter)
 
   return (
     <ProtectedRoute>
@@ -113,112 +86,11 @@ export default function MyApplicationsPage() {
             </div>
           </div>
 
-          {filteredApplications.length > 0 ? (
-            <div className="space-y-6">
-              {filteredApplications.map((application) => (
-                <Card key={application.id} className="border-0 shadow-lg overflow-hidden">
-                  <div
-                    className={`h-2 ${
-                      application.status === "Aceptada"
-                        ? "bg-emerald-500"
-                        : application.status === "Rechazada"
-                          ? "bg-red-500"
-                          : "bg-amber-500"
-                    }`}
-                  ></div>
-                  <CardHeader className="pb-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-xl font-bold text-gray-900 hover:text-purple-600 transition-colors">
-                          <Link href={`/projects/${application.projectId}`}>{application.projectTitle}</Link>
-                        </CardTitle>
-                        <CardDescription className="flex items-center mt-1">
-                          <Link href={`/profile/${application.projectCreator}`} className="flex items-center gap-2 group">
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage
-                                src={application.creatorAvatar || "/placeholder.svg"}
-                                alt={application.projectCreator}
-                              />
-                              <AvatarFallback className="bg-purple-100 text-purple-600 text-xs">
-                                {application.projectCreator
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-gray-600 group-hover:text-purple-600 transition-colors">
-                              {application.projectCreator}
-                            </span>
-                          </Link>
-                        </CardDescription>
-                      </div>
-                      <Badge
-                        className={
-                          application.status === "Aceptada"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : application.status === "Rechazada"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-amber-100 text-amber-700"
-                        }
-                      >
-                        {application.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-center mb-2">
-                        <MessageSquare size={16} className="text-gray-500 mr-2" />
-                        <h3 className="text-sm font-medium text-gray-700">Tu mensaje de solicitud:</h3>
-                      </div>
-                      <p className="text-gray-600 italic">{application.message}</p>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Calendar size={16} className="mr-2" />
-                        <span>
-                          Enviada el{" "}
-                          {new Date(application.appliedAt).toLocaleDateString("es-ES", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })}
-                        </span>
-                      </div>
-
-                      {application.status === "Pendiente" ? (
-                        <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
-                          Cancelar Solicitud
-                        </Button>
-                      ) : (
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Calendar size={16} className="mr-2" />
-                          <span>
-                            {application.status === "Aceptada" ? "Aceptada" : "Rechazada"} el{" "}
-                            {new Date(application.respondedAt!).toLocaleDateString("es-ES", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="pt-2">
-                      <Button
-                        asChild
-                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-                      >
-                        <Link href={`/projects/${application.projectId}`}>Ver Proyecto</Link>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
+          {loading ? (
+            <p>Cargando...</p>
+          ) : error ? (
+            <p className="text-red-600">{error}</p>
+          ) : filteredRequests.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-xl shadow-md">
               <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Search className="h-10 w-10 text-purple-600" />
@@ -235,6 +107,76 @@ export default function MyApplicationsPage() {
               >
                 <Link href="/">Explorar Proyectos</Link>
               </Button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {filteredRequests.map((req) => (
+                <Card key={req.id} className="border-0 shadow-lg overflow-hidden">
+                  <div
+                    className={`h-2 ${
+                      req.status === "Aceptada"
+                        ? "bg-emerald-500"
+                        : req.status === "Rechazada"
+                          ? "bg-red-500"
+                          : "bg-amber-500"
+                    }`}
+                  ></div>
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-xl font-bold text-gray-900 hover:text-purple-600 transition-colors">
+                          <Link href={`/projects/${req.project?.id}`}>{req.project?.title || "Proyecto eliminado"}</Link>
+                        </CardTitle>
+                        <CardDescription className="flex items-center mt-1">
+                          <Badge
+                            className={
+                              req.status === "Aceptada"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : req.status === "Rechazada"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-amber-100 text-amber-700"
+                            }
+                          >
+                            {req.status}
+                          </Badge>
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center mb-2">
+                        <MessageSquare size={16} className="text-gray-500 mr-2" />
+                        <h3 className="text-sm font-medium text-gray-700">Tu mensaje de solicitud:</h3>
+                      </div>
+                      <p className="text-gray-600 italic">{req.message || <span className="italic text-gray-400">Sin mensaje</span>}</p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Calendar size={16} className="mr-2" />
+                        <span>
+                          Enviada el{" "}
+                          {new Date(req.createdAt).toLocaleDateString("es-ES", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <Button
+                        asChild
+                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                      >
+                        <Link href={`/projects/${req.project?.id}`}>Ver Proyecto</Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </main>
