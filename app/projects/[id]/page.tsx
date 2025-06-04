@@ -5,15 +5,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Edit, Users, Calendar, MessageSquare } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
@@ -22,25 +13,9 @@ import { useRouter } from "next/navigation"
 import { getProjectById } from "@/src/services/projectService"
 import { useAuth } from "@/src/context/AuthContext"
 import { createCollaborationRequest, getMySentCollaborationRequests } from "@/src/services/requestService"
-
-// Utilidad para mostrar el estado en formato legible
-function getStatusLabel(status: string) {
-  switch (status) {
-    case "BUSCANDO_COLABORADORES":
-      return "Buscando Colaboradores"
-    case "EN_DESARROLLO":
-      return "En Desarrollo"
-    case "COMPLETADO":
-      return "Completado"
-    default:
-      return status
-        ? status
-            .toLowerCase()
-            .replace(/_/g, " ")
-            .replace(/(^|\s)\S/g, (l) => l.toUpperCase())
-        : "Desconocido"
-  }
-}
+import { stringToArray, getStatusLabel, AREAS, SKILLS } from "@/lib/profileUtils"
+import ErrorMessage from "@/components/ui/ErrorMessage"
+import LoadingMessage from "@/components/ui/LoadingMessage"
 
 export default function ProjectDetailPage({ params }: { params: Record<string, string> }) {
   const { id } = use(params)
@@ -107,25 +82,15 @@ export default function ProjectDetailPage({ params }: { params: Record<string, s
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
       <Navbar />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center py-12">
-          <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <MessageSquare className="h-12 w-12 text-purple-400 animate-pulse" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Cargando proyecto...</h3>
-              </div>
+        <LoadingMessage message="Cargando proyecto..." />
       </main>
-            </div>
+    </div>
   )
   if (error || !project) return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
       <Navbar />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center py-12">
-          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <MessageSquare className="h-12 w-12 text-red-400" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">{error || "Proyecto no encontrado."}</h3>
-        </div>
+        <ErrorMessage description={error || "Proyecto no encontrado."} className="max-w-lg mx-auto mt-12" />
       </main>
     </div>
   )
@@ -371,7 +336,7 @@ export default function ProjectDetailPage({ params }: { params: Record<string, s
             <div className="bg-white rounded-xl shadow-md p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-3">Habilidades Requeridas</h2>
               <div className="flex flex-wrap gap-2">
-                {((project.requiredSkills ?? project.skills ?? '').split(',').map((s: string) => s.trim()).filter(Boolean)).map((skill: string) => (
+                {stringToArray(project.requiredSkills ?? project.skills ?? '').map((skill: string) => (
                   <Badge key={skill} variant="secondary" className="bg-purple-100 text-purple-700">
                     {skill}
                   </Badge>

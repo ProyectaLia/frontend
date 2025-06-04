@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, Filter, Plus, User, LogOut, Settings, FileText, Heart } from "lucide-react"
+import { Search, Filter, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,35 +21,10 @@ import { useRouter } from "next/navigation"
 import Navbar from "@/components/Navbar"
 import { getAllProjects } from "@/src/services/projectService"
 import { useDebounce } from "@/hooks/useDebounce"
-
-const skillsFilter = ["React", "Python", "Node.js", "UX/UI Design", "Machine Learning", "Flutter", "Marketing Digital"]
-const areasFilter = [
-  "Tecnología Verde",
-  "Educación",
-  "Emprendimiento",
-  "Salud y Bienestar",
-  "Investigación",
-  "Arte y Cultura",
-]
-
-// Utilidad para mostrar el estado en formato legible
-function getStatusLabel(status: string) {
-  switch (status) {
-    case "BUSCANDO_COLABORADORES":
-      return "Buscando Colaboradores"
-    case "EN_DESARROLLO":
-      return "En Desarrollo"
-    case "COMPLETADO":
-      return "Completado"
-    default:
-      return status
-        ? status
-            .toLowerCase()
-            .replace(/_/g, " ")
-            .replace(/(^|\s)\S/g, (l) => l.toUpperCase())
-        : "Desconocido"
-  }
-}
+import { stringToArray, getStatusLabel, AREAS, SKILLS } from "@/lib/profileUtils"
+import ErrorMessage from "@/components/ui/ErrorMessage"
+import LoadingMessage from "@/components/ui/LoadingMessage"
+import EmptyState from "@/components/ui/EmptyState"
 
 export default function ExplorePage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -98,12 +73,7 @@ export default function ExplorePage() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center py-12">
-          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Search className="h-12 w-12 text-red-400" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">{error}</h3>
-        </div>
+        <ErrorMessage description={error} className="max-w-lg mx-auto mt-12" />
       </main>
     </div>
   )
@@ -152,7 +122,7 @@ export default function ExplorePage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas las áreas</SelectItem>
-                  {areasFilter.map((area) => (
+                  {AREAS.map((area) => (
                     <SelectItem key={area} value={area}>
                       {area}
                     </SelectItem>
@@ -188,16 +158,7 @@ export default function ExplorePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[300px]">
           {loading ? (
             Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="animate-pulse bg-white/60 rounded-xl shadow h-64 p-6 flex flex-col justify-between">
-                <div className="h-6 bg-purple-100 rounded w-1/2 mb-4" />
-                <div className="h-4 bg-gray-100 rounded w-1/3 mb-2" />
-                <div className="h-4 bg-gray-100 rounded w-2/3 mb-2" />
-                <div className="flex gap-2 mt-4">
-                  <div className="h-6 w-16 bg-purple-100 rounded" />
-                  <div className="h-6 w-16 bg-purple-100 rounded" />
-                </div>
-                <div className="h-10 bg-purple-100 rounded mt-6" />
-              </div>
+              <LoadingMessage key={i} />
             ))
           ) : (
             filteredProjects.map((project) => (
@@ -217,9 +178,6 @@ export default function ExplorePage() {
                     >
                       {getStatusLabel(project.status)}
                     </Badge>
-                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Heart className="h-4 w-4" />
-                    </Button>
                   </div>
                   <CardTitle className="text-xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">
                     {project.title}
@@ -234,14 +192,14 @@ export default function ExplorePage() {
                   <div>
                     <p className="text-sm font-medium text-gray-900 mb-2">Habilidades Requeridas:</p>
                     <div className="flex flex-wrap gap-2">
-                      {((project.requiredSkills ?? project.skills ?? '').split(',').filter(Boolean)).slice(0, 3).map((skill: string) => (
+                      {stringToArray(project.requiredSkills ?? project.skills ?? '').slice(0, 3).map((skill: string) => (
                         <Badge key={skill} variant="outline" className="text-xs border-purple-200 text-purple-700">
                           {skill}
                         </Badge>
                       ))}
-                      {((project.requiredSkills ?? project.skills ?? '').split(',').filter(Boolean)).length > 3 && (
+                      {stringToArray(project.requiredSkills ?? project.skills ?? '').length > 3 && (
                         <Badge variant="outline" className="text-xs border-gray-200 text-gray-600">
-                          +{((project.requiredSkills ?? project.skills ?? '').split(',').filter(Boolean)).length - 3} más
+                          +{stringToArray(project.requiredSkills ?? project.skills ?? '').length - 3} más
                         </Badge>
                       )}
                     </div>
@@ -268,26 +226,25 @@ export default function ExplorePage() {
 
         {/* Empty State */}
         {!loading && filteredProjects.length === 0 && (
-          <div className="text-center py-12">
-            <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="h-12 w-12 text-purple-400" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No se encontraron proyectos</h3>
-            <p className="text-gray-600 mb-6">
-              Intenta ajustar tus filtros de búsqueda o explora todas las categorías.
-            </p>
-            <Button
-              onClick={() => {
-                setSearchTerm("")
-                setSelectedSkills([])
-                setSelectedArea("")
-              }}
-              variant="outline"
-              className="border-purple-200 text-purple-600 hover:bg-purple-50"
-            >
-              Limpiar Filtros
-            </Button>
-          </div>
+          <EmptyState
+            icon={<Search className="h-12 w-12 text-purple-400" />}
+            title="No se encontraron proyectos"
+            description="Intenta ajustar tus filtros de búsqueda o explora todas las categorías."
+            action={
+              <Button
+                onClick={() => {
+                  setSearchTerm("")
+                  setSelectedSkills([])
+                  setSelectedArea("")
+                }}
+                variant="outline"
+                className="border-purple-200 text-purple-600 hover:bg-purple-50"
+              >
+                Limpiar Filtros
+              </Button>
+            }
+            className="my-12"
+          />
         )}
       </main>
 

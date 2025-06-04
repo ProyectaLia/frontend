@@ -12,6 +12,9 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MessageSquare, Check, X, ArrowLeft } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
+import { stringToArray, AREAS, SKILLS } from "@/lib/profileUtils"
+import ErrorMessage from "@/components/ui/ErrorMessage"
+import LoadingMessage from "@/components/ui/LoadingMessage"
 
 // Devuelve las clases de color según el estado de la solicitud
 function getStatusColor(status: string) {
@@ -113,9 +116,9 @@ export default function ProjectApplicationsPage() {
         </div>
 
           {loading ? (
-            <p>Cargando...</p>
+            <LoadingMessage message="Cargando..." />
           ) : error ? (
-            <p className="text-red-600">{error}</p>
+            <ErrorMessage description={error} className="max-w-lg mx-auto mt-12" />
           ) : requests.length > 0 ? (
           <div className="space-y-6">
               {requests.map((application: any) => (
@@ -170,11 +173,7 @@ export default function ProjectApplicationsPage() {
                       <div>
                         <h4 className="text-sm font-medium text-gray-700 mb-2">Habilidades:</h4>
                         <div className="flex flex-wrap gap-2">
-                            {(application.applicant?.skills || "")
-                              .split?.(",")
-                              .map((skill: string) => skill.trim())
-                              .filter(Boolean)
-                              .map((skill: string) => (
+                            {stringToArray(application.applicant?.skills || "").map((skill: string) => (
                             <Badge key={skill} variant="outline" className="border-purple-200 text-purple-700">
                               {skill}
                             </Badge>

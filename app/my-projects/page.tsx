@@ -12,6 +12,8 @@ import Navbar from "@/components/Navbar"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { getMyProjects, getMyCollaboratingProjects } from "@/src/services/projectService"
 import { useAuth } from "@/src/context/AuthContext"
+import { stringToArray, getStatusLabel, AREAS, SKILLS } from "@/lib/profileUtils"
+import EmptyState from "@/components/ui/EmptyState"
 
 export default function MyProjectsPage() {
   const [activeTab, setActiveTab] = useState("created")
@@ -37,20 +39,6 @@ export default function MyProjectsPage() {
       .catch(() => setError("Error al cargar tus proyectos"))
       .finally(() => setLoading(false))
   }, [authLoading, isAuthenticated])
-
-  // Agrega función para mostrar el estado de forma amigable
-  function getStatusLabel(status: string) {
-    switch ((status || '').toUpperCase()) {
-      case 'BUSCANDO_COLABORADORES':
-        return 'Buscando Colaboradores';
-      case 'EN_DESARROLLO':
-        return 'En Desarrollo';
-      case 'FINALIZADO':
-        return 'Finalizado';
-      default:
-        return status || 'Desconocido';
-    }
-  }
 
   return (
     <ProtectedRoute>
@@ -120,14 +108,14 @@ export default function MyProjectsPage() {
                       <div>
                         <p className="text-sm font-medium text-gray-900 mb-2">Habilidades Requeridas:</p>
                         <div className="flex flex-wrap gap-2">
-                            {((project.requiredSkills ?? project.skills ?? '').split(',').map((skill: string) => skill.trim()).filter(Boolean)).slice(0, 3).map((skill: string) => (
+                            {stringToArray(project.requiredSkills ?? project.skills ?? '').slice(0, 3).map((skill: string) => (
                             <Badge key={skill} variant="outline" className="text-xs border-purple-200 text-purple-700">
                               {skill}
                             </Badge>
                           ))}
-                            {((project.requiredSkills ?? project.skills ?? '').split(',').map((skill: string) => skill.trim()).filter(Boolean)).length > 3 && (
+                            {stringToArray(project.requiredSkills ?? project.skills ?? '').length > 3 && (
                             <Badge variant="outline" className="text-xs border-gray-200 text-gray-600">
-                                +{((project.requiredSkills ?? project.skills ?? '').split(',').map((skill: string) => skill.trim()).filter(Boolean)).length - 3} más
+                                +{stringToArray(project.requiredSkills ?? project.skills ?? '').length - 3} más
                             </Badge>
                           )}
                         </div>
@@ -171,21 +159,20 @@ export default function MyProjectsPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16 bg-white rounded-xl shadow-md">
-                <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Plus className="h-10 w-10 text-purple-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Aún no has creado proyectos</h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  Comparte tus ideas y encuentra colaboradores talentosos para hacerlas realidad.
-                </p>
-                <Button
-                  asChild
-                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-                >
-                  <Link href="/create-project">Crear Mi Primer Proyecto</Link>
-                </Button>
-              </div>
+              <EmptyState
+                icon={<Plus className="h-10 w-10 text-purple-600" />}
+                title="Aún no has creado proyectos"
+                description="Comparte tus ideas y encuentra colaboradores talentosos para hacerlas realidad."
+                action={
+                  <Button
+                    asChild
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                  >
+                    <Link href="/create-project">Crear Mi Primer Proyecto</Link>
+                  </Button>
+                }
+                className="my-12"
+              />
             )}
           </TabsContent>
 
@@ -231,14 +218,14 @@ export default function MyProjectsPage() {
                       <div>
                         <p className="text-sm font-medium text-gray-900 mb-2">Habilidades Requeridas:</p>
                         <div className="flex flex-wrap gap-2">
-                            {((project.requiredSkills ?? project.skills ?? '').split(',').map((skill: string) => skill.trim()).filter(Boolean)).slice(0, 3).map((skill: string) => (
+                            {stringToArray(project.requiredSkills ?? project.skills ?? '').slice(0, 3).map((skill: string) => (
                             <Badge key={skill} variant="outline" className="text-xs border-purple-200 text-purple-700">
                               {skill}
                             </Badge>
                           ))}
-                            {((project.requiredSkills ?? project.skills ?? '').split(',').map((skill: string) => skill.trim()).filter(Boolean)).length > 3 && (
+                            {stringToArray(project.requiredSkills ?? project.skills ?? '').length > 3 && (
                             <Badge variant="outline" className="text-xs border-gray-200 text-gray-600">
-                                +{((project.requiredSkills ?? project.skills ?? '').split(',').map((skill: string) => skill.trim()).filter(Boolean)).length - 3} más
+                                +{stringToArray(project.requiredSkills ?? project.skills ?? '').length - 3} más
                             </Badge>
                           )}
                         </div>
@@ -261,21 +248,20 @@ export default function MyProjectsPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16 bg-white rounded-xl shadow-md">
-                <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="h-10 w-10 text-purple-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Aún no colaboras en proyectos</h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  Explora proyectos interesantes y postúlate para colaborar con otros estudiantes.
-                </p>
-                <Button
-                  asChild
-                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-                >
-                  <Link href="/">Explorar Proyectos</Link>
-                </Button>
-              </div>
+              <EmptyState
+                icon={<Search className="h-10 w-10 text-purple-600" />}
+                title="Aún no colaboras en proyectos"
+                description="Explora proyectos interesantes y postúlate para colaborar con otros estudiantes."
+                action={
+                  <Button
+                    asChild
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                  >
+                    <Link href="/">Explorar Proyectos</Link>
+                  </Button>
+                }
+                className="my-12"
+              />
             )}
           </TabsContent>
         </Tabs>

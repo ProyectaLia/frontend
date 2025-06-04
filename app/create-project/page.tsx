@@ -17,19 +17,9 @@ import Navbar from "@/components/Navbar"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { useRouter } from "next/navigation"
 import { createProject } from "@/src/services/projectService"
-
-const areaOptions = [
-  "Tecnología Verde",
-  "Educación",
-  "Salud y Bienestar",
-  "Emprendimiento",
-  "Arte y Cultura",
-  "Ciencia e Investigación",
-  "Desarrollo Social",
-  "Innovación Tecnológica",
-  "Deportes",
-  "Otro",
-]
+import { arrayToString, AREAS, SKILLS } from "@/lib/profileUtils"
+import ErrorMessage from "@/components/ui/ErrorMessage"
+import LoadingMessage from "@/components/ui/LoadingMessage"
 
 export default function CreateProjectPage() {
   const [formData, setFormData] = useState({
@@ -74,7 +64,7 @@ export default function CreateProjectPage() {
         title: formData.title,
         description: formData.description,
         objectives: formData.objectives,
-        requiredSkills: skills.join(","),
+        requiredSkills: arrayToString(skills),
         areaTheme: formData.area,
         collaboratorsNeeded: Number(formData.collaboratorsNeeded),
       }
@@ -203,7 +193,7 @@ export default function CreateProjectPage() {
                       <SelectValue placeholder="Selecciona un área" />
                     </SelectTrigger>
                     <SelectContent>
-                      {areaOptions.map((area) => (
+                      {AREAS.map((area) => (
                         <SelectItem key={area} value={area}>
                           {area}
                         </SelectItem>
@@ -235,7 +225,7 @@ export default function CreateProjectPage() {
             </CardContent>
           </Card>
 
-            {error && <div className="text-red-600 text-sm mb-4">{error}</div>}
+            {error && <ErrorMessage description={error} className="max-w-lg mx-auto mt-8" />}
           <div className="flex justify-end space-x-4">
               <Button type="button" variant="outline" asChild disabled={submitting}>
               <Link href="/">Cancelar</Link>

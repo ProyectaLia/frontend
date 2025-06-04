@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -18,6 +16,9 @@ import ProtectedRoute from "@/components/ProtectedRoute"
 import { useAuth } from "@/src/context/AuthContext"
 import { updateUser } from "@/src/services/authService"
 import { useRouter } from "next/navigation"
+import { stringToArray, arrayToString, AREAS, SKILLS } from "@/lib/profileUtils"
+import ErrorMessage from "@/components/ui/ErrorMessage"
+import LoadingMessage from "@/components/ui/LoadingMessage"
 
 export default function EditProfilePage() {
   const { user, loading, login } = useAuth();
@@ -28,16 +29,8 @@ export default function EditProfilePage() {
     career: user?.career || "",
     university: user?.university || "",
     bio: user?.bio || "",
-    skills: Array.isArray(user?.skills)
-      ? user.skills
-      : typeof user?.skills === "string"
-        ? user.skills.split(",").map((s: string) => s.trim()).filter(Boolean)
-        : [],
-    interests: Array.isArray(user?.interests)
-      ? user.interests
-      : typeof user?.interests === "string"
-        ? user.interests.split(",").map((i: string) => i.trim()).filter(Boolean)
-        : [],
+    skills: stringToArray(user?.skills),
+    interests: stringToArray(user?.interests),
     portfolio: user?.portfolio || user?.portfolioLink || "",
     github: user?.github || "",
     linkedin: user?.linkedin || "",
@@ -54,16 +47,8 @@ export default function EditProfilePage() {
       career: user?.career || "",
       university: user?.university || "",
       bio: user?.bio || "",
-      skills: Array.isArray(user?.skills)
-        ? user.skills
-        : typeof user?.skills === "string"
-          ? user.skills.split(",").map((s: string) => s.trim()).filter(Boolean)
-          : [],
-      interests: Array.isArray(user?.interests)
-        ? user.interests
-        : typeof user?.interests === "string"
-          ? user.interests.split(",").map((i: string) => i.trim()).filter(Boolean)
-          : [],
+      skills: stringToArray(user?.skills),
+      interests: stringToArray(user?.interests),
       portfolio: user?.portfolio || user?.portfolioLink || "",
       github: user?.github || "",
       linkedin: user?.linkedin || "",
@@ -105,9 +90,8 @@ export default function EditProfilePage() {
     try {
       const res = await updateUser({
         ...formData,
-        // Convierte skills/interests a string para el backend
-        skills: Array.isArray(formData.skills) ? formData.skills.join(",") : formData.skills,
-        interests: Array.isArray(formData.interests) ? formData.interests.join(",") : formData.interests,
+        skills: arrayToString(formData.skills),
+        interests: arrayToString(formData.interests),
       });
       // Actualiza el contexto con los datos nuevos
       const token = typeof window !== "undefined" ? localStorage.getItem("proyectalia_token") || "" : "";
@@ -130,23 +114,13 @@ export default function EditProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50">
-        <Navbar />
-        <div className="text-center w-full">
-          <span className="text-lg text-gray-600">Cargando perfil...</span>
-        </div>
-      </div>
+      <LoadingMessage message="Cargando perfil..." />
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50">
-        <Navbar />
-        <div className="text-center w-full">
-          <span className="text-lg text-gray-600">No autorizado</span>
-        </div>
-      </div>
+      <ErrorMessage description="No autorizado" className="max-w-lg mx-auto mt-12" />
     );
   }
 

@@ -5,32 +5,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Edit, Mail, ExternalLink, Github, Linkedin, Twitter } from "lucide-react"
+import { Edit, ExternalLink, Github, Linkedin, Twitter } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Navbar from "@/components/Navbar"
 import { useAuth } from "@/src/context/AuthContext"
 import { use } from "react"
 import { useEffect, useState } from "react"
 import { getMyProjects, getMyCollaboratingProjects } from "@/src/services/projectService"
-
-// Utilidad para mostrar el estado en formato legible
-function getStatusLabel(status: string) {
-  switch ((status || '').toUpperCase()) {
-    case 'BUSCANDO_COLABORADORES':
-      return 'Buscando Colaboradores';
-    case 'EN_DESARROLLO':
-      return 'En Desarrollo';
-    case 'COMPLETADO':
-      return 'Completado';
-    default:
-      return status
-        ? status
-            .toLowerCase()
-            .replace(/_/g, ' ')
-            .replace(/(^|\s)\S/g, (l) => l.toUpperCase())
-        : 'Desconocido';
-  }
-}
+import { stringToArray, getStatusLabel, AREAS, SKILLS } from "@/lib/profileUtils"
+import ErrorMessage from "@/components/ui/ErrorMessage"
+import LoadingMessage from "@/components/ui/LoadingMessage"
 
 export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { user, loading } = useAuth();
@@ -56,23 +40,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50">
-        <Navbar />
-        <div className="text-center w-full">
-          <span className="text-lg text-gray-600">Cargando perfil...</span>
-        </div>
-      </div>
+      <LoadingMessage message="Cargando perfil..." />
     );
   }
 
   if (!isOwnProfile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50">
-        <Navbar />
-        <div className="text-center w-full">
-          <span className="text-lg text-gray-600">No autorizado</span>
-        </div>
-      </div>
+      <ErrorMessage description="No autorizado" className="max-w-lg mx-auto mt-12" />
     );
   }
 
@@ -159,12 +133,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-3">Habilidades</h2>
                 <div className="flex flex-wrap gap-2">
-                  {(Array.isArray(user?.skills)
-                    ? user.skills
-                    : typeof user?.skills === "string"
-                      ? user.skills.split(",").map((s: string) => s.trim()).filter(Boolean)
-                      : []
-                  ).map((skill: string) => (
+                  {stringToArray(user?.skills).map((skill: string) => (
                     <Badge
                       key={skill}
                       variant="secondary"
@@ -178,12 +147,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-3">Áreas de Interés</h2>
                 <div className="flex flex-wrap gap-2">
-                  {(Array.isArray(user?.interests)
-                    ? user.interests
-                    : typeof user?.interests === "string"
-                      ? user.interests.split(",").map((i: string) => i.trim()).filter(Boolean)
-                      : []
-                  ).map((interest: string) => (
+                  {stringToArray(user?.interests).map((interest: string) => (
                     <Badge
                       key={interest}
                       variant="secondary"

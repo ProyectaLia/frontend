@@ -10,6 +10,8 @@ import { Search, Calendar, MessageSquare } from "lucide-react"
 import Navbar from "@/components/Navbar"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { getMySentCollaborationRequests } from "@/src/services/requestService"
+import ErrorMessage from "@/components/ui/ErrorMessage"
+import LoadingMessage from "@/components/ui/LoadingMessage"
 
 // Devuelve las clases de color según el estado de la solicitud
 function getStatusColor(status: string) {
@@ -117,9 +119,9 @@ export default function MyApplicationsPage() {
         </div>
 
           {loading ? (
-            <p>Cargando...</p>
+            <LoadingMessage message="Cargando..." />
           ) : error ? (
-            <p className="text-red-600">{error}</p>
+            <ErrorMessage description={error} className="max-w-lg mx-auto mt-12" />
           ) : filteredRequests.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-xl shadow-md">
               <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">

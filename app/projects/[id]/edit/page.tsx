@@ -15,19 +15,9 @@ import ProtectedRoute from "@/components/ProtectedRoute"
 import { getProjectById, updateProject, deleteProject } from "@/src/services/projectService"
 import { toast } from "@/components/ui/use-toast"
 import { useAuth } from "@/src/context/AuthContext"
-
-const areaOptions = [
-  "Tecnología Verde",
-  "Educación",
-  "Salud y Bienestar",
-  "Emprendimiento",
-  "Arte y Cultura",
-  "Ciencia e Investigación",
-  "Desarrollo Social",
-  "Innovación Tecnológica",
-  "Deportes",
-  "Otro",
-]
+import { stringToArray, arrayToString, AREAS, SKILLS } from "@/lib/profileUtils"
+import ErrorMessage from "@/components/ui/ErrorMessage"
+import LoadingMessage from "@/components/ui/LoadingMessage"
 
 export default function EditProjectPage() {
   const router = useRouter()
@@ -63,7 +53,7 @@ export default function EditProjectPage() {
           area: p.areaTheme || "",
           collaboratorsNeeded: String(p.collaboratorsNeeded ?? 1),
         })
-        setSkills((p.requiredSkills ?? p.skills ?? "").split(",").map((s: string) => s.trim()).filter(Boolean))
+        setSkills(stringToArray(p.requiredSkills ?? p.skills ?? ""))
         setCreatorId(p.creator?.id ?? null)
       })
       .catch(() => setError("No se pudo cargar el proyecto."))
@@ -102,7 +92,7 @@ export default function EditProjectPage() {
         title: formData.title,
         description: formData.description,
         objectives: formData.objectives,
-        requiredSkills: skills.join(","),
+        requiredSkills: arrayToString(skills),
         areaTheme: formData.area,
         collaboratorsNeeded: Number(formData.collaboratorsNeeded),
       }
@@ -132,14 +122,7 @@ export default function EditProjectPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-indigo-50">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-purple-100 rounded-full flex items-center justify-center animate-pulse">
-            <Plus className="h-8 w-8 text-purple-600" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Cargando proyecto...</h2>
-        </div>
-      </div>
+      <LoadingMessage message="Cargando proyecto..." />
     )
   }
 
@@ -277,7 +260,7 @@ export default function EditProjectPage() {
                       required
                     >
                       <option value="">Selecciona un área</option>
-                      {areaOptions.map(area => (
+                      {AREAS.map(area => (
                         <option key={area} value={area}>{area}</option>
                       ))}
                     </select>
@@ -298,7 +281,7 @@ export default function EditProjectPage() {
                 </div>
               </CardContent>
             </Card>
-            {error && <div className="text-red-600 mb-4">{error}</div>}
+            {error && <ErrorMessage description={error} className="max-w-lg mx-auto mt-8" />}
             <div className="flex justify-end gap-4">
               <Button type="button" variant="secondary" onClick={() => router.push("/my-projects")}>Cancelar</Button>
               <Button type="submit" className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white" disabled={submitting}>
