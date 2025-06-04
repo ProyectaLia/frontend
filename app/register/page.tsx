@@ -1,36 +1,67 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Eye, EyeOff } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
+import { registerUser } from "@/src/services/authService"
+import { useAuth } from "@/src/context/AuthContext"
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
-    fullName: "",
+    name: "",
     email: "",
     password: "",
     confirmPassword: "",
+    career: "",
+    skills: "",
+    interests: "",
+    portfolioLink: ""
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [acceptTerms, setAcceptTerms] = useState(false)
+  const [error, setError] = useState("")
+  const router = useRouter()
+  const { login } = useAuth()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Aquí iría la lógica de registro
-    console.log("Registrando usuario:", formData)
+    setError("")
+    if (formData.password !== formData.confirmPassword) {
+      setError("Las contraseñas no coinciden.")
+      return
+    }
+    if (!acceptTerms) {
+      setError("Debes aceptar los Términos y Condiciones.")
+      return
+    }
+    try {
+      const response = await registerUser({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        career: formData.career,
+        skills: formData.skills,
+        interests: formData.interests,
+        portfolioLink: formData.portfolioLink
+      })
+      login(response.data.data, response.data.token)
+      router.push("/")
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error al registrarse. Inténtalo de nuevo.")
+    }
   }
 
   return (
@@ -56,12 +87,12 @@ export default function RegisterPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Nombre Completo</Label>
+                <Label htmlFor="name">Nombre Completo</Label>
                 <Input
-                  id="fullName"
-                  name="fullName"
+                  id="name"
+                  name="name"
                   placeholder="Juan Pérez"
-                  value={formData.fullName}
+                  value={formData.name}
                   onChange={handleChange}
                   required
                   className="h-11"
@@ -124,6 +155,50 @@ export default function RegisterPage() {
                   </button>
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="career">Carrera (opcional)</Label>
+                <Input
+                  id="career"
+                  name="career"
+                  placeholder="Ej: Ingeniería en Sistemas"
+                  value={formData.career}
+                  onChange={handleChange}
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="skills">Skills (separadas por coma, opcional)</Label>
+                <Input
+                  id="skills"
+                  name="skills"
+                  placeholder="Ej: JavaScript,React,Node.js"
+                  value={formData.skills}
+                  onChange={handleChange}
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="interests">Intereses (separados por coma, opcional)</Label>
+                <Input
+                  id="interests"
+                  name="interests"
+                  placeholder="Ej: Desarrollo Web,Inteligencia Artificial"
+                  value={formData.interests}
+                  onChange={handleChange}
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="portfolioLink">Link de Portafolio (opcional)</Label>
+                <Input
+                  id="portfolioLink"
+                  name="portfolioLink"
+                  placeholder="https://miportfolio.com"
+                  value={formData.portfolioLink}
+                  onChange={handleChange}
+                  className="h-11"
+                />
+              </div>
               <div className="flex items-center space-x-2">
                 <Checkbox id="terms" checked={acceptTerms} onCheckedChange={(checked) => setAcceptTerms(!!checked)} />
                 <label
@@ -143,6 +218,7 @@ export default function RegisterPage() {
               >
                 Registrarse
               </Button>
+              {error && <p className="text-red-600 text-center mt-2">{error}</p>}
             </form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">

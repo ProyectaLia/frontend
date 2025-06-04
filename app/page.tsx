@@ -16,6 +16,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Link from "next/link"
+import { useAuth } from "@/src/context/AuthContext"
+import { useRouter } from "next/navigation"
+import Navbar from "@/components/Navbar"
 
 const projects = [
   {
@@ -74,7 +77,8 @@ export default function ExplorePage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [selectedArea, setSelectedArea] = useState("")
-  const [isLoggedIn, setIsLoggedIn] = useState(true) // Simulating logged in state
+  const { isAuthenticated, user, logout } = useAuth()
+  const router = useRouter()
 
   const filteredProjects = projects.filter((project) => {
     const matchesSearch =
@@ -88,85 +92,7 @@ export default function ExplorePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
-      {/* Navigation Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-purple-100 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center">
-              <Link href="/" className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">PH</span>
-                </div>
-                <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                  ProyectaLia Hub
-                </span>
-              </Link>
-            </div>
-
-            {/* Navigation Links */}
-            <nav className="hidden md:flex items-center space-x-8">
-              <Link href="/" className="text-purple-600 font-medium hover:text-purple-700 transition-colors">
-                Explorar Proyectos
-              </Link>
-              {isLoggedIn && (
-                <>
-                  <Link href="/create-project" className="text-gray-600 hover:text-purple-600 transition-colors">
-                    Crear Proyecto
-                  </Link>
-                  <Link href="/my-projects" className="text-gray-600 hover:text-purple-600 transition-colors">
-                    Mis Proyectos
-                  </Link>
-                </>
-              )}
-            </nav>
-
-            {/* User Actions */}
-            <div className="flex items-center space-x-4">
-              {isLoggedIn ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src="/placeholder-user.jpg" alt="Usuario" />
-                        <AvatarFallback className="bg-purple-100 text-purple-600">JD</AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
-                    <DropdownMenuItem>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Ver Perfil</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Editar Perfil</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <FileText className="mr-2 h-4 w-4" />
-                      <span>Mis Solicitudes</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Cerrar Sesión</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <div className="flex items-center space-x-3">
-                  <Button variant="ghost" className="text-gray-600 hover:text-purple-600">
-                    Iniciar Sesión
-                  </Button>
-                  <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white">
-                    Registrarse
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -225,7 +151,7 @@ export default function ExplorePage() {
         </div>
 
         {/* Create Project CTA */}
-        {isLoggedIn && (
+        {isAuthenticated && (
           <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 mb-8 text-white">
             <div className="flex flex-col sm:flex-row items-center justify-between">
               <div>
